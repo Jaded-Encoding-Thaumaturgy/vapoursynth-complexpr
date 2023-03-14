@@ -1,0 +1,10 @@
+{
+    "editor.formatOnSave": false,
+    "files.associations": {
+        "*.vpy": "python",
+        "*.kts": "kotlin",
+        "*.vts": "typescript",
+        "vector": "cpp",
+        "algorithm": "cpp"
+    }
+}
