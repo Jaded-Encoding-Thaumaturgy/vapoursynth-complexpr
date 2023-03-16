@@ -225,15 +225,71 @@ ExprOp decodeToken(const std::string &token)
             throw std::runtime_error("illegal token: " + token);
         return{ token[0] == 'd' ? ExprOpType::DUP : ExprOpType::SWAP, idx };
     } else {
-        float f;
+        long long l = 0;
+        float f = 0;
+
+        size_t pos = 0;
+        const size_t len = token.size();
+
         std::string s;
         std::istringstream numStream(token);
         numStream.imbue(std::locale::classic());
-        if (!(numStream >> f))
+
+        if (len > 2 && token.substr(0, 2) == "0x") {
+            if (!(numStream >> std::hex >> l)) {
+                throw std::runtime_error("failed to convert '" + token + "' hex to integer");
+            } else if (numStream >> s) {
+                throw std::runtime_error("failed to convert '" + token + "' hex to integer, not the whole token could be converted");
+            }
+            pos = len;
+        } else if (len > 1 && token[0] == '0') {
+            if (!(numStream >> std::oct >> l)) {
+                throw std::runtime_error("failed to convert '" + token + "' octal to integer");
+            } else if (numStream >> s) {
+                throw std::runtime_error("failed to convert '" + token + "' octal to integer, not the whole token could be converted");
+            }
+            pos = len;
+        } else {
+            try {
+                l = std::stoll(token, &pos, 0);
+            } catch (...) { pos = 0; }
+        }
+
+        size_t dot_pos = token.find('.');
+        bool is_integer = dot_pos == std::string::npos;
+
+        if (!is_integer) {
+            for (size_t i = dot_pos + 1; i < len; i++) {
+                if (token[i] != '0') {
+                    is_integer = false;
+                    break;
+                }
+            }
+        }
+
+        if (pos == len || (pos == dot_pos && is_integer)) {
+            if ((int32_t)l == l) {
+                return { ExprOpType::CONSTANT, (float)(uint32_t)(int32_t)l };
+            } else if ((uint32_t)l == l) {
+                return { ExprOpType::CONSTANT, (float)(uint32_t)l };
+            }
+            
+            pos = 0;
+        }
+
+        try {
+            f = std::stof(token, &pos);
+        } catch (...) { pos = 0; }
+
+        if (pos == len) {
+            return { ExprOpType::CONSTANT, f };
+        }
+
+        if (pos <= 0) {
             throw std::runtime_error("failed to convert '" + token + "' to float");
-        if (numStream >> s)
-            throw std::runtime_error("failed to convert '" + token + "' to float, not the whole token could be converted");
-        return{ ExprOpType::CONSTANT, f };
+        }
+
+        throw std::runtime_error("failed to convert '" + token + "' to float, not the whole token could be converted");
     }
 }
 
