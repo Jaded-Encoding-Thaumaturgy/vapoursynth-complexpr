@@ -123,4 +123,8 @@ std::vector<ExprInstruction> compile(const std::string &expr, const VSVideoInfo 
 
 } // namespace expr
 
+uint32_t cast2uint(float value);
+uint32_t cast2uint(uint32_t value);
+uint32_t cast2uint(long long value);
+
 #endif // EXPR_H

@@ -36,6 +36,22 @@
 #include "VapourSynth4.h"
 #include "expr.h"
 
+
+uint32_t cast2uint(float value) {
+    if (value < 0) {
+        return -cast2uint(-value);
+    }
+    return static_cast<unsigned int>(value);
+}
+
+uint32_t cast2uint(uint32_t value) {
+    return value;
+}
+
+uint32_t cast2uint(long long value) {
+    return (uint32_t)value;
+}
+
 namespace expr {
 namespace {
 
@@ -280,8 +296,8 @@ ExprOp decodeToken(const std::string &token)
         }
 
         if (pos == len || (pos == dot_pos && is_integer)) {
-            if ((uint32_t)l == l) {
-                return { ExprOpType::CONSTANTI, (uint32_t)l };
+            if (cast2uint(l) == l) {
+                return { ExprOpType::CONSTANTI, cast2uint(l) };
             }
             
             pos = 0;
@@ -476,7 +492,7 @@ bool isConstant(const ExpressionTreeNode &node, float val)
         if (!isInteger(val))
             return false;
 
-        return node.op.imm.u == (uint32_t)val;
+        return node.op.imm.u == cast2uint(val);
     }
 
     return node.op.imm.f == val;
@@ -484,14 +500,14 @@ bool isConstant(const ExpressionTreeNode &node, float val)
 
 #define CONSTVALUE(node) ((node->op.type == ExprOpType::CONSTANTI) ? node->op.imm.u : node->op.imm.f)
 #define CONSTVALUEF(node) (float)(CONSTVALUE(node))
-#define CONSTVALUEI(node) (uint32_t)(CONSTVALUE(node))
+#define CONSTVALUEI(node) cast2uint(CONSTVALUE(node))
 
-#define CASTCONSTVAL(node, val) ((node->op.type == ExprOpType::CONSTANTI) ? (uint32_t)val : (float)val)
+#define CASTCONSTVAL(node, val) ((node->op.type == ExprOpType::CONSTANTI) ? cast2uint(val) : (float)val)
 
 ExprOp getFloatOrIntegerConstant(float value)
 {
-    if ((uint32_t)value == value) {
-        return { ExprOpType::CONSTANTI, (uint32_t)value };
+    if (cast2uint(value) == value) {
+        return { ExprOpType::CONSTANTI, cast2uint(value) };
     } else {
         return { ExprOpType::CONSTANTF, value };
     }
