@@ -106,7 +106,8 @@ public:
             case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_F16: DST = 0; break;
             case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.u])[x]; break;
-            case ExprOpType::CONSTANT: DST = insn.op.imm.f; break;
+            case ExprOpType::CONSTANTF: DST = insn.op.imm.f; break;
+            case ExprOpType::CONSTANTI: DST = (float)insn.op.imm.u; break;  // AAAAA
             case ExprOpType::ADD: DST = SRC1 + SRC2; break;
             case ExprOpType::SUB: DST = SRC1 - SRC2; break;
             case ExprOpType::MUL: DST = SRC1 * SRC2; break;

@@ -37,7 +37,8 @@ enum class PlaneOp {
 
 enum class ExprOpType {
     // Terminals.
-    MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_F16, MEM_LOAD_F32, CONSTANT,
+    MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_F16, MEM_LOAD_F32,
+    CONSTANTF, CONSTANTI,
     MEM_STORE_U8, MEM_STORE_U16, MEM_STORE_F16, MEM_STORE_F32,
 
     // Arithmetic primitives.

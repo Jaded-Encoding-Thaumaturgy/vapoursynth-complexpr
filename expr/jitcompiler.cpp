@@ -27,12 +27,19 @@ namespace expr {
 
 void ExprCompiler::addInstruction(const ExprInstruction &insn)
 {
+    if (insn.op.type == ExprOpType::CONSTANTI) {
+        ExprInstruction newInsn{ { ExprOpType::CONSTANTF, (float)insn.op.imm.u } };
+        newInsn.dst = insn.dst;
+        loadConst(newInsn);
+        return;
+    }
+
     switch (insn.op.type) {
     case ExprOpType::MEM_LOAD_U8: load8(insn); break;
     case ExprOpType::MEM_LOAD_U16: load16(insn); break;
     case ExprOpType::MEM_LOAD_F16: loadF16(insn); break;
     case ExprOpType::MEM_LOAD_F32: loadF32(insn); break;
-    case ExprOpType::CONSTANT: loadConst(insn); break;
+    case ExprOpType::CONSTANTF: loadConst(insn); break;
     case ExprOpType::MEM_STORE_U8: store8(insn); break;
     case ExprOpType::MEM_STORE_U16: store16(insn); break;
     case ExprOpType::MEM_STORE_F16: storeF16(insn); break;

@@ -47,7 +47,7 @@ using namespace vsh;
 
 
 static const char *op_names[] = {
-	"loadu8", "loadu16", "loadf16", "loadf32", "constant",
+	"loadu8", "loadu16", "loadf16", "loadf32", "constantf", "constanti",
 	"storeu8", "storeu16", "storef16", "storef32",
 	"add", "sub", "mul", "div", "fma", "sqrt", "abs", "neg", "max", "min", "cmp",
 	"and", "or", "xor", "not",
@@ -133,9 +133,10 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
                 case ExprOpType::MEM_LOAD_F32:
                     asmCode << ',' << clipNamePrefix << insn.op.imm.u;
                     break;
-                case ExprOpType::CONSTANT:
+                case ExprOpType::CONSTANTF:
                     asmCode << ',' << insn.op.imm.f;
                     break;
+                case ExprOpType::CONSTANTI:
                 case ExprOpType::FMA:
                     asmCode << "," << insn.op.imm.u;
                     break;
