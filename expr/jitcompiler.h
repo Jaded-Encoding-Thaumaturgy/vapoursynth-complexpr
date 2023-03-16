@@ -28,6 +28,7 @@
 namespace expr {
 
 struct ExprDefaultAccumulators {
+    bool xposition = false;
 };
 
 class ExprCompiler {
@@ -79,6 +80,13 @@ public:
 
     void addInstructions(const ExprInstruction *bytecode, size_t numInsns) {
         ExprDefaultAccumulators accs{};
+
+        for (size_t i = 0; i < numInsns; ++i) {
+            if (bytecode[i].op.type == ExprOpType::MEM_LOAD_VAR && bytecode[i].op.imm.u == MemoryVar::VAR_X) {
+                accs.xposition = true;
+                break;
+            }
+        }
 
         addPreInstructions(bytecode, numInsns, accs);
 

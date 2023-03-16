@@ -77,6 +77,8 @@ enum class ComparisonType {
 };
 
 enum MemoryVar {
+    // Special checked value
+    VAR_X = -1, // the current column
     // Value used as index for frame_consts 
     VAR_N = 0, // current frame number
     VAR_Y = 1, // the current row

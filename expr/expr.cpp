@@ -230,6 +230,8 @@ ExprOp decodeToken(const std::string &token)
             switch (token[0]) {
                 case 'N':
                     return { MemoryVar::VAR_N };
+                case 'X':
+                    return { MemoryVar::VAR_X };
                 case 'Y':
                     return { MemoryVar::VAR_Y };
             }

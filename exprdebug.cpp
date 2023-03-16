@@ -139,6 +139,9 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
                     case MemoryVar::VAR_N:
                         asmCode << ",n";
                         break;
+                    case MemoryVar::VAR_X:
+                        asmCode << ",x";
+                        break;
                     case MemoryVar::VAR_Y:
                         asmCode << ",y";
                         break;

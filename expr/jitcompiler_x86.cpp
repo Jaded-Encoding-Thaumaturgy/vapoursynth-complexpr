@@ -347,15 +347,22 @@ do { \
 
     void loadConstVar(const ExprInstruction &insn) override
     {
-        deferred.push_back(EMIT()
+        bool is_var_x = insn.op.imm.u == MemoryVar::VAR_X;
+
+        deferred.push_back([this, insn, is_var_x](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             auto t1 = bytecodeRegs[insn.dst];
 
-            Reg32 a;
-            mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
-            VEX1(movd, t1.first, a);
-            VEX2IMM(shufps, t1.first, t1.first, t1.first, 0);
-            VEX1(movaps, t1.second, t1.first);
+            if (is_var_x) {
+                VEX1(movdqa, t1.first, regAccs[-1].first);
+                VEX1(movdqa, t1.second, regAccs[-1].second);
+            } else {
+                Reg32 a;
+                mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
+                VEX1(movd, t1.first, a);
+                VEX2IMM(shufps, t1.first, t1.first, t1.first, 0);
+                VEX1(movaps, t1.second, t1.first);
+            }
         });
     }
 
@@ -1025,6 +1032,10 @@ do { \
 
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> regAccs;
 
+        for (const auto &f : prolog) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -1054,9 +1065,28 @@ do { \
     }
 
     void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+        if (accs.xposition) {
+            ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
+            prolog.push_back(EMIT()
+            {
+                (void)insn;
+                VEX1(movaps, regAccs[-1].first, xmmword_ptr[constants + ConstantIndex::float_0to3 * 16]);
+                VEX1(movaps, regAccs[-1].second, xmmword_ptr[constants + ConstantIndex::float_4to7 * 16]);
+                VEX1(movaps, regAccs[-2].first, xmmword_ptr[constants + ConstantIndex::float_8 * 16]);
+            });
+        }
     }
 
     void addPostInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+        if (accs.xposition) {
+            ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
+            deferred.push_back(EMIT()
+            {
+                (void)insn;
+                VEX2(addps, regAccs[-1].first, regAccs[-1].first, regAccs[-2].first);
+                VEX2(addps, regAccs[-1].second, regAccs[-1].second, regAccs[-2].first);
+            });
+        }
     }
 
 public:
@@ -1329,15 +1359,21 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
 
     void loadConstVar(const ExprInstruction &insn) override
     {
-        deferred.push_back(EMIT()
+        bool is_var_x = insn.op.imm.u == MemoryVar::VAR_X;
+
+        deferred.push_back([this, insn, is_var_x](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> &regAccs, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
         {
             auto t1 = bytecodeRegs[insn.dst];
-
-            XmmReg r1;
-            Reg32 a;
-            mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
-            vmovd(r1, a);
-            vbroadcastss(t1, r1);
+            
+            if (is_var_x) {
+                vmovaps(t1, regAccs[-1]);
+            } else {
+                XmmReg r1;
+                Reg32 a;
+                mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
+                vmovd(r1, a);
+                vbroadcastss(t1, r1);
+            }
         });
     }
 
@@ -1792,6 +1828,10 @@ do { \
         
         std::unordered_map<int, YmmReg> regAccs;
 
+        for (const auto &f : prolog) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -1821,9 +1861,26 @@ do { \
     }
 
     void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+        if (accs.xposition) {
+            ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
+            prolog.push_back(EMIT()
+            {
+                (void)insn;
+                vmovaps(regAccs[-1], ymmword_ptr[constants + ConstantIndex::float_0to7 * 32]);
+                vmovaps(regAccs[-2], ymmword_ptr[constants + ConstantIndex::float_8 * 32]);
+            });
+        }
     }
 
     void addPostInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+        if (accs.xposition) {
+            ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
+            deferred.push_back(EMIT()
+            {
+                (void)insn;
+                vaddps(regAccs[-1], regAccs[-1], regAccs[-2]);
+            });
+        }
     }
 
 public:
