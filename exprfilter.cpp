@@ -156,7 +156,7 @@ public:
             case ExprOpType::MEM_STORE_U8:  reinterpret_cast<uint8_t *>(dstp)[x] = clamp_int<uint8_t>(SRC1); return;
             case ExprOpType::MEM_STORE_U16: reinterpret_cast<uint16_t *>(dstp)[x] = clamp_int<uint16_t>(SRC1, insn.op.imm.u); return;
             case ExprOpType::MEM_STORE_U32: reinterpret_cast<uint32_t *>(dstp)[x] = clamp_int<uint32_t>(SRC1, insn.op.imm.u); return;
-            case ExprOpType::MEM_STORE_F16: reinterpret_cast<uint16_t *>(dstp)[x] = SRC1; return;
+            case ExprOpType::MEM_STORE_F16: reinterpret_cast<float16 *>(dstp)[x] = (float16)SRC1; return;
             case ExprOpType::MEM_STORE_F32: reinterpret_cast<float *>(dstp)[x] = SRC1; return;
             default: fprintf(stderr, "%s", "illegal opcode\n"); std::terminate(); return;
             }
