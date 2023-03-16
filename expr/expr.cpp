@@ -25,6 +25,7 @@
 #include <locale>
 #include <map>
 #include <memory>
+#include <regex>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -37,6 +38,8 @@
 
 namespace expr {
 namespace {
+
+static const std::string clipNamePrefix { "src" };
 
 struct ExpressionTreeNode {
     ExpressionTreeNode *parent;
@@ -188,11 +191,27 @@ ExprOp decodeToken(const std::string &token)
         { "swap", { ExprOpType::SWAP, 1 } },
     };
 
+    const std::string clipNameRePrefix { "^([a-z]|" + clipNamePrefix + "[0-9]+)" };
+    static const std::regex clipNameRe { clipNameRePrefix + "$" };
+    std::smatch match;
+
+    auto extractClipId = [](const std::string &name) -> int {
+        if (name.size() == 1)
+            return name[0] >= 'x' ? name[0] - 'x' : name[0] - 'a' + 3;
+        int idx = -1;
+        try {
+            idx = std::stoi(name.substr(clipNamePrefix.size()));
+        } catch (...) {
+            throw std::runtime_error("invalid clip name: " + name);
+        }
+        return idx;
+    };
+
     auto it = simple.find(token);
     if (it != simple.end()) {
         return it->second;
-    } else if (token.size() == 1 && token[0] >= 'a' && token[0] <= 'z') {
-        return{ ExprOpType::MEM_LOAD_U8, token[0] >= 'x' ? token[0] - 'x' : token[0] - 'a' + 3 };
+    } else if (std::regex_match(token, match, clipNameRe)) {
+        return{ ExprOpType::MEM_LOAD_U8, extractClipId(token) };
     } else if (token.substr(0, 3) == "dup" || token.substr(0, 4) == "swap") {
         size_t prefix = token[0] == 'd' ? 3 : 4;
         size_t count = 0;
