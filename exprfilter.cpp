@@ -105,7 +105,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
             int h = vsapi->getFrameHeight(dst, plane);
             int w = vsapi->getFrameWidth(dst, plane);
 
-            std::vector<float> frame_consts(MemoryVar::VAR_Y + 1, 0.0f);
+            std::vector<float> frame_consts(MemoryVar::MV_SIZE, 0.0f);
             frame_consts[MemoryVar::VAR_N] = (float)n;
 
             if (d->proc[plane]) {

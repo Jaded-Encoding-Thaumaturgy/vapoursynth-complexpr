@@ -82,6 +82,8 @@ enum MemoryVar {
     // Value used as index for frame_consts 
     VAR_N = 0, // current frame number
     VAR_Y = 1, // the current row
+
+    MV_SIZE
 };
 
 union ExprUnion {
