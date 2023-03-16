@@ -226,6 +226,15 @@ ExprOp decodeToken(const std::string &token)
             throw std::runtime_error("illegal token: " + token);
         return{ token[0] == 'd' ? ExprOpType::DUP : ExprOpType::SWAP, idx };
     } else {
+        if (token.size() == 1) {
+            switch (token[0]) {
+                case 'N':
+                    return { MemoryVar::VAR_N };
+                case 'Y':
+                    return { MemoryVar::VAR_Y };
+            }
+        }
+
         long long l = 0;
         float f = 0;
 
@@ -302,6 +311,7 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         0, // MEM_LOAD_U32
         0, // MEM_LOAD_F16
         0, // MEM_LOAD_F32
+        0, // MEM_LOAD_VAR
         0, // CONSTANTF
         0, // CONSTANTI
         0, // MEM_STORE_U8
@@ -442,6 +452,7 @@ bool isConstantExpr(const ExpressionTreeNode &node)
     case ExprOpType::MEM_LOAD_U32:
     case ExprOpType::MEM_LOAD_F16:
     case ExprOpType::MEM_LOAD_F32:
+    case ExprOpType::MEM_LOAD_VAR:
         return false;
     case ExprOpType::CONSTANTF:
     case ExprOpType::CONSTANTI:
@@ -611,7 +622,7 @@ class ExponentMap {
 
         bool operator()(const std::pair<int, float> &lhs, const std::pair<int, float> &rhs) const
         {
-            const std::initializer_list<ExprOpType> memOpCodes = { ExprOpType::MEM_LOAD_U8, ExprOpType::MEM_LOAD_U16, ExprOpType::MEM_LOAD_U32, ExprOpType::MEM_LOAD_F16, ExprOpType::MEM_LOAD_F32 };
+            const std::initializer_list<ExprOpType> memOpCodes = { ExprOpType::MEM_LOAD_U8, ExprOpType::MEM_LOAD_U16, ExprOpType::MEM_LOAD_U32, ExprOpType::MEM_LOAD_F16, ExprOpType::MEM_LOAD_F32, ExprOpType::MEM_LOAD_VAR };
 
             // Order equivalent terms by exponent.
             if (lhs.first == rhs.first)

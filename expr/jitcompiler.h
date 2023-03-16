@@ -29,7 +29,7 @@ namespace expr {
 
 class ExprCompiler {
 public:
-    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, intptr_t niter);
+    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts, intptr_t niter);
 private:
     virtual void load8(const ExprInstruction &insn) = 0;
     virtual void load16(const ExprInstruction &insn) = 0;
@@ -37,6 +37,7 @@ private:
     virtual void loadF16(const ExprInstruction &insn) = 0;
     virtual void loadF32(const ExprInstruction &insn) = 0;
     virtual void loadConst(const ExprInstruction &insn) = 0;
+    virtual void loadConstVar(const ExprInstruction &insn) = 0;
     virtual void store8(const ExprInstruction &insn) = 0;
     virtual void store16(const ExprInstruction &insn) = 0;
     virtual void store32(const ExprInstruction &insn) = 0;

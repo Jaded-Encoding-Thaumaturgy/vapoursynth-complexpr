@@ -37,7 +37,7 @@ enum class PlaneOp {
 
 enum class ExprOpType {
     // Terminals.
-    MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_U32, MEM_LOAD_F16, MEM_LOAD_F32,
+    MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_U32, MEM_LOAD_F16, MEM_LOAD_F32, MEM_LOAD_VAR,
     CONSTANTF, CONSTANTI,
     MEM_STORE_U8, MEM_STORE_U16, MEM_STORE_U32, MEM_STORE_F16, MEM_STORE_F32,
 
@@ -76,6 +76,12 @@ enum class ComparisonType {
     NLE = 6,
 };
 
+enum MemoryVar {
+    // Value used as index for frame_consts 
+    VAR_N = 0, // current frame number
+    VAR_Y = 1, // the current row
+};
+
 union ExprUnion {
     int32_t i;
     uint32_t u;
@@ -93,6 +99,7 @@ struct ExprOp {
     ExprUnion imm;
 
     ExprOp(ExprOpType type, ExprUnion param = {}) : type(type), imm(param) {}
+    ExprOp(MemoryVar type) : type(ExprOpType::MEM_LOAD_VAR), imm(type) {}
 };
 
 inline bool operator==(const ExprOp &lhs, const ExprOp &rhs) { return lhs.type == rhs.type && lhs.imm.u == rhs.imm.u; }

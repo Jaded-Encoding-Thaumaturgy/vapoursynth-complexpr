@@ -93,7 +93,7 @@ public:
         registers.resize(maxreg + 1);
     }
 
-    void eval(const uint8_t * const *srcp, uint8_t *dstp, int x)
+    void eval(const uint8_t * const *srcp, uint8_t *dstp, const float *consts, int x)
     {
         for (size_t i = 0; i < numInsns; ++i) {
             const ExprInstruction &insn = bytecode[i];
@@ -108,6 +108,12 @@ public:
             case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.u])[x]; break;
+            case ExprOpType::MEM_LOAD_VAR:
+                switch (static_cast<MemoryVar>(insn.op.imm.u)) {
+                case MemoryVar::VAR_N:
+                case MemoryVar::VAR_Y:
+                    DST = consts[insn.op.imm.u]; break;
+                }
             case ExprOpType::CONSTANTF: DST = insn.op.imm.f; break;
             case ExprOpType::CONSTANTI: DST = (float)insn.op.imm.u; break;  // AAAAA
             case ExprOpType::ADD: DST = SRC1 + SRC2; break;
@@ -201,6 +207,9 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
             int h = vsapi->getFrameHeight(dst, plane);
             int w = vsapi->getFrameWidth(dst, plane);
 
+            std::vector<float> frame_consts(MemoryVar::VAR_Y + 1, 0.0f);
+            frame_consts[MemoryVar::VAR_N] = (float)n;
+
             if (d->proc[plane]) {
                 ExprCompiler::ProcessLineProc proc = d->proc[plane];
                 int niterations = (w + 7) / 8;
@@ -211,18 +220,20 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
                 }
 
                 for (int y = 0; y < h; y++) {
+                    frame_consts[MemoryVar::VAR_Y] = y;
                     uint8_t *rwptrs[d->alignment] = { dstp + dst_stride * y };
                     for (int i = 0; i < numInputs; i++) {
                         rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + src_stride[i] * y);
                     }
-                    proc(rwptrs, ptroffsets, niterations);
+                    proc(rwptrs, ptroffsets, &frame_consts[0], niterations);
                 }
             } else {
                 ExprInterpreter interpreter(d->bytecode[plane].data(), d->bytecode[plane].size());
 
                 for (int y = 0; y < h; y++) {
+                    frame_consts[MemoryVar::VAR_Y] = y;
                     for (int x = 0; x < w; x++) {
-                        interpreter.eval(srcp, dstp, x);
+                        interpreter.eval(srcp, dstp, &frame_consts[0], x);
                     }
 
                     for (int i = 0; i < numInputs; i++) {

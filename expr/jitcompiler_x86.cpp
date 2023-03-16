@@ -38,10 +38,10 @@ static_assert(static_cast<int>(ComparisonType::NEQ) == _CMP_NEQ_UQ, "");
 static_assert(static_cast<int>(ComparisonType::NLT) == _CMP_NLT_US, "");
 static_assert(static_cast<int>(ComparisonType::NLE) == _CMP_NLE_US, "");
 
-class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, intptr_t> {
-    typedef jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, intptr_t> jit;
-    friend struct jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, intptr_t>;
-    friend struct jitasm::function_cdecl<void, ExprCompiler128, uint8_t *, const intptr_t *, intptr_t>;
+class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t> {
+    typedef jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t> jit;
+    friend struct jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t>;
+    friend struct jitasm::function_cdecl<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t>;
 
 #define SPLAT(x) { (x), (x), (x), (x) }
     static constexpr ExprUnion constData alignas(16)[69][4] = {
@@ -192,13 +192,13 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
 #undef SPLAT
 
     // JitASM compiles everything from main(), so record the operations for later.
-    std::vector<std::function<void(Reg, XmmReg, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &)>> deferred;
+    std::vector<std::function<void(Reg, XmmReg, Reg, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &)>> deferred;
 
     CPUFeatures cpuFeatures;
     int numInputs;
     int curLabel;
 
-#define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+#define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
 #define VEX1(op, arg1, arg2) \
 do { \
   if (cpuFeatures.avx) \
@@ -333,6 +333,20 @@ do { \
 
             Reg32 a;
             mov(a, insn.op.imm.u);
+            VEX1(movd, t1.first, a);
+            VEX2IMM(shufps, t1.first, t1.first, t1.first, 0);
+            VEX1(movaps, t1.second, t1.first);
+        });
+    }
+
+    void loadConstVar(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.dst];
+
+            Reg32 a;
+            mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
             VEX1(movd, t1.first, a);
             VEX2IMM(shufps, t1.first, t1.first, t1.first, 0);
             VEX1(movaps, t1.second, t1.first);
@@ -780,7 +794,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -810,7 +824,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -840,7 +854,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -959,7 +973,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, issin, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, issin, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -995,7 +1009,7 @@ do { \
         sincos(false, insn);
     }
 
-    void main(Reg regptrs, Reg regoffs, Reg niter)
+    void main(Reg regptrs, Reg regoffs, Reg frame_consts, Reg niter)
     {
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> bytecodeRegs;
         XmmReg zero;
@@ -1006,7 +1020,7 @@ do { \
         L("wloop");
 
         for (const auto &f : deferred) {
-            f(regptrs, zero, constants, bytecodeRegs);
+            f(regptrs, zero, constants, frame_consts, bytecodeRegs);
         }
 
 #if UINTPTR_MAX > UINT32_MAX
@@ -1057,10 +1071,10 @@ public:
 
 constexpr ExprUnion ExprCompiler128::constData alignas(16)[69][4];
 
-class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, intptr_t> {
-    typedef jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, intptr_t> jit;
-    friend struct jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, intptr_t>;
-    friend struct jitasm::function_cdecl<void, ExprCompiler256, uint8_t *, const intptr_t *, intptr_t>;
+class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> {
+    typedef jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> jit;
+    friend struct jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t>;
+    friend struct jitasm::function_cdecl<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t>;
 
 #define SPLAT(x) { (x), (x), (x), (x), (x), (x), (x), (x) }
     static constexpr ExprUnion constData alignas(32)[69][8] = {
@@ -1211,13 +1225,13 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
 #undef SPLAT
 
     // JitASM compiles everything from main(), so record the operations for later.
-    std::vector<std::function<void(Reg, YmmReg, Reg, std::unordered_map<int, YmmReg> &)>> deferred;
+    std::vector<std::function<void(Reg, YmmReg, Reg, Reg, std::unordered_map<int, YmmReg> &)>> deferred;
 
     CPUFeatures cpuFeatures;
     int numInputs;
     int curLabel;
 
-#define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> &bytecodeRegs)
+#define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
 
     void load8(const ExprInstruction &insn) override
     {
@@ -1290,6 +1304,20 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
             XmmReg r1;
             Reg32 a;
             mov(a, insn.op.imm.u);
+            vmovd(r1, a);
+            vbroadcastss(t1, r1);
+        });
+    }
+
+    void loadConstVar(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.dst];
+
+            XmmReg r1;
+            Reg32 a;
+            mov(a, dword_ptr[frame_consts + sizeof(float) * insn.op.imm.u]);
             vmovd(r1, a);
             vbroadcastss(t1, r1);
         });
@@ -1736,7 +1764,7 @@ do { \
         });
     }
 
-    void main(Reg regptrs, Reg regoffs, Reg niter)
+    void main(Reg regptrs, Reg regoffs, Reg frame_consts, Reg niter)
     {
         std::unordered_map<int, YmmReg> bytecodeRegs;
         YmmReg zero;
@@ -1747,7 +1775,7 @@ do { \
         L("wloop");
 
         for (const auto &f : deferred) {
-            f(regptrs, zero, constants, bytecodeRegs);
+            f(regptrs, zero, constants, frame_consts, bytecodeRegs);
         }
 
 #if UINTPTR_MAX > UINT32_MAX
