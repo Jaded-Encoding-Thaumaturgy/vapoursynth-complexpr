@@ -44,7 +44,7 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
     friend struct jitasm::function_cdecl<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t>;
 
 #define SPLAT(x) { (x), (x), (x), (x) }
-    static constexpr ExprUnion constData alignas(16)[69][4] = {
+    static constexpr ExprUnion constData alignas(16)[72][4] = {
         SPLAT(0x7FFFFFFF), // absmask
         SPLAT(0x80000000), // negmask
         SPLAT(0x7F), // x7F
@@ -114,6 +114,9 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
         SPLAT(0x3D2AA73C), // float_cosC4
         SPLAT(static_cast<int32_t>(0XBAB58D50)), // float_cosC6
         SPLAT(0x37C1AD76), // float_cosC8
+        {0.0f, 1.0f, 2.0f, 3.0f}, // float_0to3
+        {4.0f, 5.0f, 6.0f, 7.0f}, // float_4to7
+        SPLAT(8.f) // float_8
     };
 
     struct ConstantIndex {
@@ -188,6 +191,9 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
         static constexpr int float_cosC4 = float_cosC2 + 1;
         static constexpr int float_cosC6 = float_cosC2 + 2;
         static constexpr int float_cosC8 = float_cosC2 + 3;
+        static constexpr int float_0to3 = 69;
+        static constexpr int float_4to7 = 70;
+        static constexpr int float_8 = 71;
     };
 #undef SPLAT
 
@@ -1069,7 +1075,7 @@ public:
 #undef EMIT
 };
 
-constexpr ExprUnion ExprCompiler128::constData alignas(16)[69][4];
+constexpr ExprUnion ExprCompiler128::constData alignas(16)[72][4];
 
 class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> {
     typedef jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> jit;
@@ -1077,7 +1083,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
     friend struct jitasm::function_cdecl<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t>;
 
 #define SPLAT(x) { (x), (x), (x), (x), (x), (x), (x), (x) }
-    static constexpr ExprUnion constData alignas(32)[69][8] = {
+    static constexpr ExprUnion constData alignas(32)[71][8] = {
         SPLAT(0x7FFFFFFF), // absmask
         SPLAT(0x80000000), // negmask
         SPLAT(0x7F), // x7F
@@ -1147,6 +1153,8 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         SPLAT(0x3D2AA73C), // float_cosC4
         SPLAT(static_cast<int32_t>(0XBAB58D50)), // float_cosC6
         SPLAT(0x37C1AD76), // float_cosC8
+        { 0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f }, // float_0to7
+        SPLAT(8.0f), // float_8
     };
 
     struct ConstantIndex {
@@ -1221,6 +1229,8 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         static constexpr int float_cosC4 = float_cosC2 + 1;
         static constexpr int float_cosC6 = float_cosC2 + 2;
         static constexpr int float_cosC8 = float_cosC2 + 3;
+        static constexpr int float_0to7 = 69;
+        static constexpr int float_8 = 70;
     };
 #undef SPLAT
 
@@ -1820,7 +1830,7 @@ public:
 #undef EMIT
 };
 
-constexpr ExprUnion ExprCompiler256::constData alignas(32)[69][8];
+constexpr ExprUnion ExprCompiler256::constData alignas(32)[71][8];
 
 
 } // namespace
