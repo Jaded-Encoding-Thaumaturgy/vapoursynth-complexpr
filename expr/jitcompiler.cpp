@@ -86,9 +86,8 @@ std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstructi
 	if (!compiler)
 		return{};
 
-	for (size_t i = 0; i < numInsns; ++i) {
-		compiler->addInstruction(bytecode[i]);
-	}
+	compiler->addInstructions(bytecode, numInsns);
+
 	return compiler->getCode();
 }
 

@@ -67,9 +67,17 @@ private:
 public:
     virtual ~ExprCompiler() = default;
 
-    void addInstruction(const ExprInstruction &insn);
 
     virtual std::pair<ProcessLineProc, size_t> getCode() = 0;
+
+    void addInstruction(const ExprInstruction &insn);
+
+    void addInstructions(const ExprInstruction *bytecode, size_t numInsns) {
+
+        for (size_t i = 0; i < numInsns; ++i) {
+            addInstruction(bytecode[i]);
+        }
+    }
 };
 
 #ifdef VS_TARGET_CPU_X86
