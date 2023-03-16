@@ -254,7 +254,7 @@ ExprOp decodeToken(const std::string &token)
                 throw std::runtime_error("failed to convert '" + token + "' hex to integer, not the whole token could be converted");
             }
             pos = len;
-        } else if (len > 1 && token[0] == '0') {
+        } else if (len > 1 && token[0] == '0' && token[1] != '.') {
             if (!(numStream >> std::oct >> l)) {
                 throw std::runtime_error("failed to convert '" + token + "' octal to integer");
             } else if (numStream >> s) {
@@ -280,9 +280,7 @@ ExprOp decodeToken(const std::string &token)
         }
 
         if (pos == len || (pos == dot_pos && is_integer)) {
-            if ((int32_t)l == l) {
-                return { ExprOpType::CONSTANTI, (uint32_t)(int32_t)l };
-            } else if ((uint32_t)l == l) {
+            if ((uint32_t)l == l) {
                 return { ExprOpType::CONSTANTI, (uint32_t)l };
             }
             
