@@ -27,6 +27,9 @@
 
 namespace expr {
 
+struct ExprDefaultAccumulators {
+};
+
 class ExprCompiler {
 public:
     typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts, intptr_t niter);
@@ -67,16 +70,23 @@ private:
 public:
     virtual ~ExprCompiler() = default;
 
+    virtual void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) {}
+    virtual void addPostInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) {}
 
     virtual std::pair<ProcessLineProc, size_t> getCode() = 0;
 
     void addInstruction(const ExprInstruction &insn);
 
     void addInstructions(const ExprInstruction *bytecode, size_t numInsns) {
+        ExprDefaultAccumulators accs{};
+
+        addPreInstructions(bytecode, numInsns, accs);
 
         for (size_t i = 0; i < numInsns; ++i) {
             addInstruction(bytecode[i]);
         }
+
+        addPostInstructions(bytecode, numInsns, accs);
     }
 };
 

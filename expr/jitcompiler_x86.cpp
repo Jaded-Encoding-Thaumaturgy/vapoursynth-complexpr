@@ -198,13 +198,13 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
 #undef SPLAT
 
     // JitASM compiles everything from main(), so record the operations for later.
-    std::vector<std::function<void(Reg, XmmReg, Reg, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &)>> deferred;
+    std::vector<std::function<void(Reg, XmmReg, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &)>> deferred, prolog;
 
     CPUFeatures cpuFeatures;
     int numInputs;
     int curLabel;
 
-#define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+#define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
 #define VEX1(op, arg1, arg2) \
 do { \
   if (cpuFeatures.avx) \
@@ -800,7 +800,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -830,7 +830,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -860,7 +860,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -979,7 +979,7 @@ do { \
     {
         int l = curLabel++;
 
-        deferred.push_back([this, issin, insn, l](Reg regptrs, XmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        deferred.push_back([this, issin, insn, l](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
         {
             char label[] = "label-0000";
             sprintf(label, "label-%04d", l);
@@ -1023,10 +1023,12 @@ do { \
         Reg constants;
         mov(constants, (uintptr_t)constData);
 
+        std::unordered_map<int, std::pair<XmmReg, XmmReg>> regAccs;
+
         L("wloop");
 
         for (const auto &f : deferred) {
-            f(regptrs, zero, constants, frame_consts, bytecodeRegs);
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
 #if UINTPTR_MAX > UINT32_MAX
@@ -1049,6 +1051,12 @@ do { \
 
         jit::sub(niter, 1);
         jnz("wloop");
+    }
+
+    void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+    }
+
+    void addPostInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
     }
 
 public:
@@ -1235,13 +1243,13 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
 #undef SPLAT
 
     // JitASM compiles everything from main(), so record the operations for later.
-    std::vector<std::function<void(Reg, YmmReg, Reg, Reg, std::unordered_map<int, YmmReg> &)>> deferred;
+    std::vector<std::function<void(Reg, YmmReg, Reg, std::unordered_map<int, YmmReg> &, Reg, std::unordered_map<int, YmmReg> &)>> deferred, prolog;
 
     CPUFeatures cpuFeatures;
     int numInputs;
     int curLabel;
 
-#define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
+#define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> & regAccs, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
 
     void load8(const ExprInstruction &insn) override
     {
@@ -1781,11 +1789,13 @@ do { \
         vpxor(zero, zero, zero);
         Reg constants;
         mov(constants, (uintptr_t)constData);
+        
+        std::unordered_map<int, YmmReg> regAccs;
 
         L("wloop");
 
         for (const auto &f : deferred) {
-            f(regptrs, zero, constants, frame_consts, bytecodeRegs);
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
 #if UINTPTR_MAX > UINT32_MAX
@@ -1808,6 +1818,12 @@ do { \
 
         jit::sub(niter, 1);
         jnz("wloop");
+    }
+
+    void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
+    }
+
+    void addPostInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
     }
 
 public:
