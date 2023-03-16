@@ -298,12 +298,14 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
     constexpr unsigned char numOperands[] = {
         0, // MEM_LOAD_U8
         0, // MEM_LOAD_U16
+        0, // MEM_LOAD_U32
         0, // MEM_LOAD_F16
         0, // MEM_LOAD_F32
         0, // CONSTANTF
         0, // CONSTANTI
         0, // MEM_STORE_U8
         0, // MEM_STORE_U16
+        0, // MEM_STORE_U32
         0, // MEM_STORE_F16
         0, // MEM_STORE_F32
         2, // ADD
@@ -357,6 +359,8 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
                 op.type = ExprOpType::MEM_LOAD_U8;
             else if (format.sampleType == stInteger && format.bytesPerSample == 2)
                 op.type = ExprOpType::MEM_LOAD_U16;
+            else if (format.sampleType == stInteger && format.bytesPerSample == 4)
+                op.type = ExprOpType::MEM_LOAD_U32;
             else if (format.sampleType == stFloat && format.bytesPerSample == 2)
                 op.type = ExprOpType::MEM_LOAD_F16;
             else if (format.sampleType == stFloat && format.bytesPerSample == 4)
@@ -434,6 +438,7 @@ bool isConstantExpr(const ExpressionTreeNode &node)
     switch (node.op.type) {
     case ExprOpType::MEM_LOAD_U8:
     case ExprOpType::MEM_LOAD_U16:
+    case ExprOpType::MEM_LOAD_U32:
     case ExprOpType::MEM_LOAD_F16:
     case ExprOpType::MEM_LOAD_F32:
         return false;
@@ -605,7 +610,7 @@ class ExponentMap {
 
         bool operator()(const std::pair<int, float> &lhs, const std::pair<int, float> &rhs) const
         {
-            const std::initializer_list<ExprOpType> memOpCodes = { ExprOpType::MEM_LOAD_U8, ExprOpType::MEM_LOAD_U16, ExprOpType::MEM_LOAD_F16, ExprOpType::MEM_LOAD_F32 };
+            const std::initializer_list<ExprOpType> memOpCodes = { ExprOpType::MEM_LOAD_U8, ExprOpType::MEM_LOAD_U16, ExprOpType::MEM_LOAD_U32, ExprOpType::MEM_LOAD_F16, ExprOpType::MEM_LOAD_F32 };
 
             // Order equivalent terms by exponent.
             if (lhs.first == rhs.first)
@@ -1638,12 +1643,14 @@ std::vector<ExprInstruction> compile(ExpressionTree &tree, const VSVideoInfo &vi
         store.op.type = ExprOpType::MEM_STORE_U8;
     else if (format.sampleType == stInteger && format.bytesPerSample == 2)
         store.op.type = ExprOpType::MEM_STORE_U16;
+    else if (format.sampleType == stInteger && format.bytesPerSample == 4)
+        store.op.type = ExprOpType::MEM_STORE_U32;
     else if (format.sampleType == stFloat && format.bytesPerSample == 2)
         store.op.type = ExprOpType::MEM_STORE_F16;
     else if (format.sampleType == stFloat && format.bytesPerSample == 4)
         store.op.type = ExprOpType::MEM_STORE_F32;
 
-    if (store.op.type == ExprOpType::MEM_STORE_U16)
+    if ((store.op.type == ExprOpType::MEM_STORE_U16) || (store.op.type == ExprOpType::MEM_STORE_U32))
         store.op.imm.u = format.bitsPerSample;
 
     store.src1 = code.back().dst;

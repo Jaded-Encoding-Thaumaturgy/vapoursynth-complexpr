@@ -47,8 +47,8 @@ using namespace vsh;
 
 
 static const char *op_names[] = {
-	"loadu8", "loadu16", "loadf16", "loadf32", "constantf", "constanti",
-	"storeu8", "storeu16", "storef16", "storef32",
+	"loadu8", "loadu16", "loadu32", "loadf16", "loadf32", "constantf", "constanti",
+	"storeu8", "storeu16", "storeu32", "storef16", "storef32",
 	"add", "sub", "mul", "div", "fma", "sqrt", "abs", "neg", "max", "min", "cmp",
 	"and", "or", "xor", "not",
 	"exp", "log", "pow", "sin", "cos",
@@ -112,7 +112,7 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
             for (auto &insn : bytecode) {
                 asmCode << std::setw(12) << std::left << op_names[static_cast<size_t>(insn.op.type)];
 
-                if (insn.op.type == ExprOpType::MEM_STORE_U8 || insn.op.type == ExprOpType::MEM_STORE_U16 || insn.op.type == ExprOpType::MEM_STORE_F16 || insn.op.type == ExprOpType::MEM_STORE_F32) {
+                if (insn.op.type == ExprOpType::MEM_STORE_U8 || insn.op.type == ExprOpType::MEM_STORE_U16 || insn.op.type == ExprOpType::MEM_STORE_U32 || insn.op.type == ExprOpType::MEM_STORE_F16 || insn.op.type == ExprOpType::MEM_STORE_F32) {
                     asmCode << " r" << insn.src1 << '\n';
                     continue;
                 }
@@ -129,6 +129,7 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
                 switch (insn.op.type) {
                 case ExprOpType::MEM_LOAD_U8:
                 case ExprOpType::MEM_LOAD_U16:
+                case ExprOpType::MEM_LOAD_U32:
                 case ExprOpType::MEM_LOAD_F16:
                 case ExprOpType::MEM_LOAD_F32:
                     asmCode << ',' << clipNamePrefix << insn.op.imm.u;

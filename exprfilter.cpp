@@ -104,6 +104,7 @@ public:
             switch (insn.op.type) {
             case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.u])[x]; break;
+            case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_F16: DST = 0; break;
             case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::CONSTANTF: DST = insn.op.imm.f; break;
@@ -147,6 +148,7 @@ public:
             case ExprOpType::NOT: DST = bool2float(!float2bool(SRC1)); break;
             case ExprOpType::MEM_STORE_U8:  reinterpret_cast<uint8_t *>(dstp)[x] = clamp_int<uint8_t>(SRC1); return;
             case ExprOpType::MEM_STORE_U16: reinterpret_cast<uint16_t *>(dstp)[x] = clamp_int<uint16_t>(SRC1, insn.op.imm.u); return;
+            case ExprOpType::MEM_STORE_U32: reinterpret_cast<uint32_t *>(dstp)[x] = clamp_int<uint32_t>(SRC1, insn.op.imm.u); return;
             case ExprOpType::MEM_STORE_F16: reinterpret_cast<uint16_t *>(dstp)[x] = 0; return;
             case ExprOpType::MEM_STORE_F32: reinterpret_cast<float *>(dstp)[x] = SRC1; return;
             default: fprintf(stderr, "%s", "illegal opcode\n"); std::terminate(); return;
@@ -286,13 +288,13 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
             }
 
             if (EXPR_F16C_TEST) {
-                if ((vi[i]->format.bitsPerSample > 16 && vi[i]->format.sampleType == stInteger)
+                if ((vi[i]->format.bitsPerSample > 32 && vi[i]->format.sampleType == stInteger)
                     || (vi[i]->format.bitsPerSample != 16 && vi[i]->format.bitsPerSample != 32 && vi[i]->format.sampleType == stFloat))
-                    throw std::runtime_error("Input clips must be 8-16 bit integer or 16/32 bit float format");
+                    throw std::runtime_error("Input clips must be 8-32 bit integer or 16/32 bit float format");
             } else {
-                if ((vi[i]->format.bitsPerSample > 16 && vi[i]->format.sampleType == stInteger)
+                if ((vi[i]->format.bitsPerSample > 32 && vi[i]->format.sampleType == stInteger)
                     || (vi[i]->format.bitsPerSample != 32 && vi[i]->format.sampleType == stFloat))
-                    throw std::runtime_error("Input clips must be 8-16 bit integer or 32 bit float format");
+                    throw std::runtime_error("Input clips must be 8-32 bit integer or 32 bit float format");
             }
         }
 

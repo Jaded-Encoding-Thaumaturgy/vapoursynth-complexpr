@@ -33,11 +33,13 @@ public:
 private:
     virtual void load8(const ExprInstruction &insn) = 0;
     virtual void load16(const ExprInstruction &insn) = 0;
+    virtual void load32(const ExprInstruction &insn) = 0;
     virtual void loadF16(const ExprInstruction &insn) = 0;
     virtual void loadF32(const ExprInstruction &insn) = 0;
     virtual void loadConst(const ExprInstruction &insn) = 0;
     virtual void store8(const ExprInstruction &insn) = 0;
     virtual void store16(const ExprInstruction &insn) = 0;
+    virtual void store32(const ExprInstruction &insn) = 0;
     virtual void storeF16(const ExprInstruction &insn) = 0;
     virtual void storeF32(const ExprInstruction &insn) = 0;
     virtual void add(const ExprInstruction &insn) = 0;
