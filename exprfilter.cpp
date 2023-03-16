@@ -29,9 +29,10 @@
 #include <vector>
 #include "VapourSynth4.h"
 #include "VSHelper4.h"
-#include "kernel/cpufeatures.h"
 #include "expr/expr.h"
 #include "expr/jitcompiler.h"
+#include "kernel/umHalf.h"
+#include "kernel/cpufeatures.h"
 #include "kernel/cpulevel.h"
 
 #ifdef VS_TARGET_OS_WINDOWS
@@ -105,7 +106,7 @@ public:
             case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.u])[x]; break;
-            case ExprOpType::MEM_LOAD_F16: DST = 0; break;
+            case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.u])[x]; break;
             case ExprOpType::CONSTANTF: DST = insn.op.imm.f; break;
             case ExprOpType::CONSTANTI: DST = (float)insn.op.imm.u; break;  // AAAAA
@@ -149,7 +150,7 @@ public:
             case ExprOpType::MEM_STORE_U8:  reinterpret_cast<uint8_t *>(dstp)[x] = clamp_int<uint8_t>(SRC1); return;
             case ExprOpType::MEM_STORE_U16: reinterpret_cast<uint16_t *>(dstp)[x] = clamp_int<uint16_t>(SRC1, insn.op.imm.u); return;
             case ExprOpType::MEM_STORE_U32: reinterpret_cast<uint32_t *>(dstp)[x] = clamp_int<uint32_t>(SRC1, insn.op.imm.u); return;
-            case ExprOpType::MEM_STORE_F16: reinterpret_cast<uint16_t *>(dstp)[x] = 0; return;
+            case ExprOpType::MEM_STORE_F16: reinterpret_cast<uint16_t *>(dstp)[x] = SRC1; return;
             case ExprOpType::MEM_STORE_F32: reinterpret_cast<float *>(dstp)[x] = SRC1; return;
             default: fprintf(stderr, "%s", "illegal opcode\n"); std::terminate(); return;
             }
@@ -252,13 +253,6 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     std::unique_ptr<ExprData> d(new ExprData);
     int err;
 
-#ifdef VS_TARGET_CPU_X86
-    const CPUFeatures &f = *getCPUFeatures();
-#   define EXPR_F16C_TEST (f.f16c)
-#else
-#   define EXPR_F16C_TEST (false)
-#endif
-
     try {
         d->numInputs = vsapi->mapNumElements(in, "clips");
         d->node = std::vector<VSNode *>(d->numInputs, nullptr);
@@ -287,15 +281,11 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
                 throw std::runtime_error("All inputs must have the same number of planes and the same dimensions, subsampling included");
             }
 
-            if (EXPR_F16C_TEST) {
-                if ((vi[i]->format.bitsPerSample > 32 && vi[i]->format.sampleType == stInteger)
-                    || (vi[i]->format.bitsPerSample != 16 && vi[i]->format.bitsPerSample != 32 && vi[i]->format.sampleType == stFloat))
-                    throw std::runtime_error("Input clips must be 8-32 bit integer or 16/32 bit float format");
-            } else {
-                if ((vi[i]->format.bitsPerSample > 32 && vi[i]->format.sampleType == stInteger)
-                    || (vi[i]->format.bitsPerSample != 32 && vi[i]->format.sampleType == stFloat))
-                    throw std::runtime_error("Input clips must be 8-32 bit integer or 32 bit float format");
-            }
+            if (
+                (vi[i]->format.bitsPerSample > 32 && vi[i]->format.sampleType == stInteger) ||
+                (vi[i]->format.bitsPerSample != 16 && vi[i]->format.bitsPerSample != 32 && vi[i]->format.sampleType == stFloat)
+            )
+                throw std::runtime_error("Input clips must be 8-32 bit integer or 16/32 bit float format");
         }
 
         d->vi = *vi[0];
