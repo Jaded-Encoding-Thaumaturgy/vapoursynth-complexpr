@@ -45,15 +45,11 @@ using namespace vsh;
 
 namespace {
 
-enum PlaneOp {
-    poProcess, poCopy, poUndefined
-};
-
 struct ExprData {
     std::vector<VSNode *> node;
     VSVideoInfo vi;
     std::vector<ExprInstruction> bytecode[3];
-    int plane[3];
+    PlaneOp plane[3];
     int numInputs;
     int alignment;
     ExprCompiler::ProcessLineProc proc[3];
@@ -179,7 +175,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         int height = vsapi->getFrameHeight(src[0], 0);
         int width = vsapi->getFrameWidth(src[0], 0);
         int planes[3] = { 0, 1, 2 };
-        const VSFrame *srcf[3] = { d->plane[0] != poCopy ? nullptr : src[0], d->plane[1] != poCopy ? nullptr : src[0], d->plane[2] != poCopy ? nullptr : src[0] };
+        const VSFrame *srcf[3] = { d->plane[0] != PlaneOp::poCopy ? nullptr : src[0], d->plane[1] != PlaneOp::poCopy ? nullptr : src[0], d->plane[2] != PlaneOp::poCopy ? nullptr : src[0] };
         VSFrame *dst = vsapi->newVideoFrame2(&d->vi.format, width, height, srcf, planes, src[0], core);
 
         const uint8_t *srcp[numInputs] = {};
@@ -187,7 +183,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         intptr_t ptroffsets[d->alignment] = { d->vi.format.bytesPerSample * 8 };
 
         for (int plane = 0; plane < d->vi.format.numPlanes; plane++) {
-            if (d->plane[plane] != poProcess)
+            if (d->plane[plane] != PlaneOp::poProcess)
                 continue;
 
             for (int i = 0; i < numInputs; i++) {
@@ -328,15 +324,15 @@ static void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore
 
         for (int i = 0; i < d->vi.format.numPlanes; i++) {
             if (!expr[i].empty()) {
-                d->plane[i] = poProcess;
+                d->plane[i] = PlaneOp::poProcess;
             } else {
                 if (d->vi.format.bitsPerSample == vi[0]->format.bitsPerSample && d->vi.format.sampleType == vi[0]->format.sampleType)
-                    d->plane[i] = poCopy;
+                    d->plane[i] = PlaneOp::poCopy;
                 else
-                    d->plane[i] = poUndefined;
+                    d->plane[i] = PlaneOp::poUndefined;
             }
 
-            if (d->plane[i] != poProcess)
+            if (d->plane[i] != PlaneOp::poProcess)
                 continue;
 
             d->bytecode[i] = compile(expr[i], vi, d->numInputs, d->vi);

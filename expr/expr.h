@@ -29,6 +29,12 @@ struct VSVideoInfo;
 
 namespace expr {
 
+static const std::string clipNamePrefix { "src" };
+
+enum class PlaneOp {
+    poProcess, poCopy, poUndefined
+};
+
 enum class ExprOpType {
     // Terminals.
     MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_F16, MEM_LOAD_F32, CONSTANT,

@@ -39,8 +39,6 @@
 namespace expr {
 namespace {
 
-static const std::string clipNamePrefix { "src" };
-
 struct ExpressionTreeNode {
     ExpressionTreeNode *parent;
     ExpressionTreeNode *left;
