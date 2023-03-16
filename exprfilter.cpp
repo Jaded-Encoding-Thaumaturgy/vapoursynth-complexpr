@@ -43,8 +43,6 @@
 using namespace expr;
 using namespace vsh;
 
-namespace {
-
 struct ExprData {
     std::vector<VSNode *> node;
     VSVideoInfo vi;
@@ -247,7 +245,7 @@ static void VS_CC exprFree(void *instanceData, VSCore *core, const VSAPI *vsapi)
     delete d;
 }
 
-static void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     std::unique_ptr<ExprData> d(new ExprData);
     int err;
 
@@ -356,14 +354,4 @@ static void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore
         deps.push_back({d->node[i], (d->vi.numFrames <= vsapi->getVideoInfo(d->node[i])->numFrames) ? rpStrictSpatial : rpGeneral});
     vsapi->createVideoFilter(out, "Expr", &d->vi, exprGetFrame, exprFree, fmParallel, deps.data(), d->numInputs, d.get(), core);
     d.release();
-}
-
-} // namespace
-
-
-//////////////////////////////////////////
-// Init
-
-void exprInitialize(VSPlugin *plugin, const VSPLUGINAPI *vspapi) {
-    vspapi->registerFunction("Expr", "clips:vnode[];expr:data[];format:int:opt;", "clip:vnode;", exprCreate, nullptr, plugin);
 }

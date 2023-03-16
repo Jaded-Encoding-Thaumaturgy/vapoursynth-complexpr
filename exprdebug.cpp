@@ -45,7 +45,6 @@
 using namespace expr;
 using namespace vsh;
 
-namespace {
 
 static const char *op_names[] = {
 	"loadu8", "loadu16", "loadf16", "loadf32", "constant",
@@ -64,7 +63,7 @@ static const char *cmp_names[8] = {
 	"EQ", "LT", "LE", "?", "NEQ", "NLT", "NLE", "?"
 };
 
-static void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
+void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     int err;
 
     try {
@@ -156,14 +155,4 @@ static void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, V
         vsapi->mapSetError(out, (std::string{ "ExprDebug: " } + e.what()).c_str());
         return;
     }
-}
-
-} // namespace
-
-
-//////////////////////////////////////////
-// Init
-
-void exprDebugInitialize(VSPlugin *plugin, const VSPLUGINAPI *vspapi) {
-    vspapi->registerFunction("ExprDebug", "expr:data[];format:int:opt;optimize:int:opt;", "asm:data[];", exprDebugCreate, nullptr, plugin);
 }
