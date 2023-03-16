@@ -29,8 +29,6 @@ struct VSVideoInfo;
 
 namespace expr {
 
-#define MAX_EXPR_INPUTS 26
-
 enum class ExprOpType {
     // Terminals.
     MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_F16, MEM_LOAD_F32, CONSTANT,

@@ -29,7 +29,7 @@ namespace expr {
 
 class ExprCompiler {
 public:
-    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t ptroff[MAX_EXPR_INPUTS + 1], intptr_t niter);
+    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, intptr_t niter);
 private:
     virtual void load8(const ExprInstruction &insn) = 0;
     virtual void load16(const ExprInstruction &insn) = 0;

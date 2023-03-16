@@ -50,11 +50,12 @@ enum PlaneOp {
 };
 
 struct ExprData {
-    VSNode *node[MAX_EXPR_INPUTS];
+    std::vector<VSNode *> node;
     VSVideoInfo vi;
     std::vector<ExprInstruction> bytecode[3];
     int plane[3];
     int numInputs;
+    int alignment;
     ExprCompiler::ProcessLineProc proc[3];
     size_t procSize[3];
 
@@ -171,7 +172,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         for (int i = 0; i < numInputs; i++)
             vsapi->requestFrameFilter(n, d->node[i], frameCtx);
     } else if (activationReason == arAllFramesReady) {
-        const VSFrame *src[MAX_EXPR_INPUTS] = {};
+        const VSFrame *src[numInputs] = {};
         for (int i = 0; i < numInputs; i++)
             src[i] = vsapi->getFrameFilter(n, d->node[i], frameCtx);
 
@@ -181,9 +182,9 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         const VSFrame *srcf[3] = { d->plane[0] != poCopy ? nullptr : src[0], d->plane[1] != poCopy ? nullptr : src[0], d->plane[2] != poCopy ? nullptr : src[0] };
         VSFrame *dst = vsapi->newVideoFrame2(&d->vi.format, width, height, srcf, planes, src[0], core);
 
-        const uint8_t *srcp[MAX_EXPR_INPUTS] = {};
-        ptrdiff_t src_stride[MAX_EXPR_INPUTS] = {};
-        alignas(32) intptr_t ptroffsets[((MAX_EXPR_INPUTS + 1) + 7) & ~7] = { d->vi.format.bytesPerSample * 8 };
+        const uint8_t *srcp[numInputs] = {};
+        ptrdiff_t src_stride[numInputs] = {};
+        intptr_t ptroffsets[d->alignment] = { d->vi.format.bytesPerSample * 8 };
 
         for (int plane = 0; plane < d->vi.format.numPlanes; plane++) {
             if (d->plane[plane] != poProcess)
@@ -212,7 +213,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
                 }
 
                 for (int y = 0; y < h; y++) {
-                    alignas(32) uint8_t *rwptrs[((MAX_EXPR_INPUTS + 1) + 7) & ~7] = { dstp + dst_stride * y };
+                    uint8_t *rwptrs[d->alignment] = { dstp + dst_stride * y };
                     for (int i = 0; i < numInputs; i++) {
                         rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + src_stride[i] * y);
                     }
@@ -234,7 +235,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
             }
         }
 
-        for (int i = 0; i < MAX_EXPR_INPUTS; i++) {
+        for (int i = 0; i < numInputs; i++) {
             vsapi->freeFrame(src[i]);
         }
         return dst;
@@ -245,7 +246,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
 static void VS_CC exprFree(void *instanceData, VSCore *core, const VSAPI *vsapi) {
     ExprData *d = static_cast<ExprData *>(instanceData);
-    for (int i = 0; i < MAX_EXPR_INPUTS; i++)
+    for (int i = 0; i < d->numInputs; i++)
         vsapi->freeNode(d->node[i]);
     delete d;
 }
@@ -263,14 +264,15 @@ static void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore
 
     try {
         d->numInputs = vsapi->mapNumElements(in, "clips");
-        if (d->numInputs > 26)
-            throw std::runtime_error("More than 26 input clips provided");
+        d->node = std::vector<VSNode *>(d->numInputs, nullptr);
+
+        d->alignment = ((d->numInputs + 1) + 7) & ~7;
 
         for (int i = 0; i < d->numInputs; i++) {
             d->node[i] = vsapi->mapGetNode(in, "clips", i, &err);
         }
 
-        const VSVideoInfo *vi[MAX_EXPR_INPUTS] = {};
+        const VSVideoInfo *vi[d->numInputs] = {};
         for (int i = 0; i < d->numInputs; i++) {
             if (d->node[i])
                 vi[i] = vsapi->getVideoInfo(d->node[i]);
@@ -346,7 +348,7 @@ static void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore
         FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
 #endif
     } catch (std::runtime_error &e) {
-        for (int i = 0; i < MAX_EXPR_INPUTS; i++) {
+        for (int i = 0; i < d->numInputs; i++) {
             vsapi->freeNode(d->node[i]);
         }
         vsapi->mapSetError(out, (std::string{ "Expr: " } + e.what()).c_str());
