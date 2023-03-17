@@ -213,6 +213,11 @@ ExprOp decodeToken(const std::string &token)
         { "cos",  { ExprOpType::COS } },
         { "dup",  { ExprOpType::DUP, 0 } },
         { "swap", { ExprOpType::SWAP, 1 } },
+        { "N",    { MemoryVar::VAR_N } },
+        { "X",    { MemoryVar::VAR_X } },
+        { "Y",    { MemoryVar::VAR_Y } },
+        { "width",{ MemoryVar::VAR_WIDTH } },
+        {"height",{ MemoryVar::VAR_HEIGHT } },
     };
 
     const std::string clipNameRePrefix { "^([a-z]|" + clipNamePrefix + "[0-9]+)" };
@@ -251,17 +256,6 @@ ExprOp decodeToken(const std::string &token)
             throw std::runtime_error("illegal token: " + token);
         return{ token[0] == 'd' ? ExprOpType::DUP : ExprOpType::SWAP, idx };
     } else {
-        if (token.size() == 1) {
-            switch (token[0]) {
-                case 'N':
-                    return { MemoryVar::VAR_N };
-                case 'X':
-                    return { MemoryVar::VAR_X };
-                case 'Y':
-                    return { MemoryVar::VAR_Y };
-            }
-        }
-
         long long l = 0;
         float f = 0;
 

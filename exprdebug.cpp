@@ -64,6 +64,12 @@ static const char *cmp_names[8] = {
 	"EQ", "LT", "LE", "?", "NEQ", "NLT", "NLE", "?"
 };
 
+static const char *load_var_names[] = {
+	"X", "Y", "N", "width", "height"
+};
+
+static_assert(sizeof(load_var_names) / sizeof(load_var_names[0]) == MemoryVar::MV_SIZE + 1, "");
+
 void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core, const VSAPI *vsapi) {
     int err;
 
@@ -136,17 +142,8 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
                     asmCode << ',' << clipNamePrefix << insn.op.imm.u;
                     break;
                 case ExprOpType::MEM_LOAD_VAR:
-                    switch (static_cast<MemoryVar>(insn.op.imm.u)) {
-                    case MemoryVar::VAR_N:
-                        asmCode << ",n";
-                        break;
-                    case MemoryVar::VAR_X:
-                        asmCode << ",x";
-                        break;
-                    case MemoryVar::VAR_Y:
-                        asmCode << ",y";
-                        break;
-                    }
+                    asmCode << ',' << load_var_names[insn.op.imm.u + 1];
+                    break;
                 case ExprOpType::CONSTANTF:
                     asmCode << ',' << insn.op.imm.f;
                     break;

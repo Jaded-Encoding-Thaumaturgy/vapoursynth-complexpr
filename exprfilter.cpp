@@ -130,6 +130,8 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
             std::vector<float> frame_consts(MemoryVar::MV_SIZE, 0.0f);
             frame_consts[MemoryVar::VAR_N] = (float)n;
+            frame_consts[MemoryVar::VAR_WIDTH] = (float)w;
+            frame_consts[MemoryVar::VAR_HEIGHT] = (float)h;
 
             if constexpr (compiled) {
                 ExprCompiler::ProcessLineProc proc = d->proc[plane];

@@ -83,8 +83,10 @@ enum MemoryVar {
     // Special checked value
     VAR_X = -1, // the current column
     // Value used as index for frame_consts 
-    VAR_N = 0, // current frame number
-    VAR_Y = 1, // the current row
+    VAR_Y = 0, // the current row
+    VAR_N = 1, // current frame number
+    VAR_WIDTH = 2, // the current plane width
+    VAR_HEIGHT = 3, // the current plane height
 
     MV_SIZE
 };

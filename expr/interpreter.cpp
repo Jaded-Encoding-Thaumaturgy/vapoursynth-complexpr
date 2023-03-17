@@ -36,8 +36,7 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
         case ExprOpType::MEM_LOAD_VAR:
             switch (static_cast<MemoryVar>(insn.op.imm.u)) {
             case MemoryVar::VAR_X: DST = x; break;
-            case MemoryVar::VAR_N:
-            case MemoryVar::VAR_Y:
+            default:
                 DST = consts[insn.op.imm.u]; break;
             }
         case ExprOpType::CONSTANTF: DST = insn.op.imm.f; break;
