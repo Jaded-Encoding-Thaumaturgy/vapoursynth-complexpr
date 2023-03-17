@@ -54,6 +54,11 @@ private:
     virtual void fma(const ExprInstruction &insn) = 0;
     virtual void max(const ExprInstruction &insn) = 0;
     virtual void min(const ExprInstruction &insn) = 0;
+    virtual void round_(const ExprInstruction &insn, const int round_flag) = 0;
+    void round(const ExprInstruction &insn) { round_(insn,  8); };
+    void floor(const ExprInstruction &insn) { round_(insn,  9); };
+    void ceil(const ExprInstruction &insn)  { round_(insn, 10); };
+    void trunc(const ExprInstruction &insn) { round_(insn, 11); };
     virtual void sqrt(const ExprInstruction &insn) = 0;
     virtual void abs(const ExprInstruction &insn) = 0;
     virtual void neg(const ExprInstruction &insn) = 0;

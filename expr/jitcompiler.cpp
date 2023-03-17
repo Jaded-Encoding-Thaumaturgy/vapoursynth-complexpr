@@ -62,6 +62,10 @@ void ExprCompiler::addInstruction(const ExprInstruction &insn)
     case ExprOpType::OR: or_(insn); break;
     case ExprOpType::XOR: xor_(insn); break;
     case ExprOpType::CMP: cmp(insn); break;
+    case ExprOpType::TRUNC: trunc(insn); break;
+    case ExprOpType::ROUND: round(insn); break;
+    case ExprOpType::FLOOR: floor(insn); break;
+    case ExprOpType::CEIL: ceil(insn); break;
     case ExprOpType::TERNARY: ternary(insn); break;
     case ExprOpType::EXP: exp(insn); break;
     case ExprOpType::LOG: log(insn); break;

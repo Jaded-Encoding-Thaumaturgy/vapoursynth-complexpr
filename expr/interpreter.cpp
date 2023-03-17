@@ -74,6 +74,10 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
             case ComparisonType::NLE: DST = bool2float(SRC1 > SRC2); break;
             }
             break;
+        case ExprOpType::TRUNC: DST = std::trunc(SRC1); break;
+        case ExprOpType::ROUND: DST = std::round(SRC1); break;
+        case ExprOpType::FLOOR: DST = std::floor(SRC1); break;
+        case ExprOpType::CEIL: DST = std::ceil(SRC1); break;
         case ExprOpType::TERNARY: DST = float2bool(SRC1) ? SRC2 : SRC3; break;
         case ExprOpType::AND: DST = bool2float((float2bool(SRC1) && float2bool(SRC2))); break;
         case ExprOpType::OR:  DST = bool2float((float2bool(SRC1) || float2bool(SRC2))); break;

@@ -584,6 +584,24 @@ do { \
     }
 #undef BINARYOP
 
+    void round_(const ExprInstruction &insn, const int round_flag) {
+        const jitasm::Imm8 &round_mode(round_flag);
+
+        deferred.push_back([this, insn, round_mode](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.dst];
+
+            if (cpuFeatures.avx) {            
+                vroundps(t2.first, t1.first, round_mode);
+                vroundps(t2.second, t1.second, round_mode);
+            } else {
+                roundps(t2.first, t1.first, round_mode);
+                roundps(t2.second, t1.second, round_mode);
+            }
+        });
+    }
+
     void sqrt(const ExprInstruction &insn) override
     {
         deferred.push_back(EMIT()
@@ -1539,6 +1557,18 @@ do { \
         });
     }
 #undef BINARYOP
+
+    void round_(const ExprInstruction &insn, const int round_flag) {
+        const jitasm::Imm8 &round_mode(round_flag);
+
+        deferred.push_back([this, insn, round_mode](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> &regAccs, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.dst];
+      
+            vroundps(t2, t1, round_mode);
+        });
+    }
 
     void sqrt(const ExprInstruction &insn) override
     {

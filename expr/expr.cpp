@@ -191,6 +191,10 @@ ExprOp decodeToken(const std::string &token)
         { "=",    { ExprOpType::CMP, static_cast<int>(ComparisonType::EQ) } },
         { ">=",   { ExprOpType::CMP, static_cast<int>(ComparisonType::NLT) } },
         { "<=",   { ExprOpType::CMP, static_cast<int>(ComparisonType::LE) } },
+        { "trunc",{ ExprOpType::TRUNC } },
+        { "round",{ ExprOpType::ROUND } },
+        { "floor",{ ExprOpType::FLOOR } },
+        { "ceil", { ExprOpType::CEIL } },
         { "and",  { ExprOpType::AND } },
         { "or",   { ExprOpType::OR } },
         { "xor",  { ExprOpType::XOR } },
@@ -346,6 +350,10 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         2, // MAX
         2, // MIN
         2, // CMP
+        1, // TRUNC
+        1, // ROUND
+        1, // FLOOR
+        1, // CEIL
         2, // AND
         2, // OR
         2, // XOR
@@ -561,6 +569,10 @@ float evalConstantExpr(const ExpressionTreeNode &node)
     case ExprOpType::POW: return std::pow(LEFT, RIGHT);
     case ExprOpType::SIN: return std::sin(LEFT);
     case ExprOpType::COS: return std::cos(LEFT);
+    case ExprOpType::TRUNC: return std::trunc(LEFT);
+    case ExprOpType::ROUND: return std::round(LEFT);
+    case ExprOpType::FLOOR: return std::floor(LEFT);
+    case ExprOpType::CEIL: return std::ceil(LEFT);
     case ExprOpType::TERNARY: return float2bool(LEFT) ? RIGHTLEFT : RIGHTRIGHT;
     default: return NAN;
     }

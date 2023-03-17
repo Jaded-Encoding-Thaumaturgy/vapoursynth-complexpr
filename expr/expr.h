@@ -44,6 +44,9 @@ enum class ExprOpType {
     // Arithmetic primitives.
     ADD, SUB, MUL, DIV, FMA, SQRT, ABS, NEG, MAX, MIN, CMP,
 
+    // Integer conversion.
+    TRUNC, ROUND, FLOOR, CEIL,
+
     // Logical operators.
     AND, OR, XOR, NOT,
 
