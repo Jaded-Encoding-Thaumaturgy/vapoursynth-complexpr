@@ -212,8 +212,8 @@ ExprOp decodeToken(const std::string &token)
         { "^",    { ExprOpType::POW } },
         { "sin",  { ExprOpType::SIN } },
         { "cos",  { ExprOpType::COS } },
-        { "dup",  { ExprOpType::DUP, 0 } },
-        { "swap", { ExprOpType::SWAP, 1 } },
+        { "dup",  { ExprOpType::DUP, 1 } },
+        { "swap", { ExprOpType::SWAP, 2 } },
         { "N",    { MemoryVar::VAR_N } },
         { "X",    { MemoryVar::VAR_X } },
         { "Y",    { MemoryVar::VAR_Y } },
@@ -382,7 +382,7 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         // Check validity.
         if (op.type == ExprOpType::MEM_LOAD_U8 && op.imm.i >= numInputs)
             throw std::runtime_error("reference to undefined clip: " + tok);
-        if ((op.type == ExprOpType::DUP || op.type == ExprOpType::SWAP) && op.imm.u >= stack.size())
+        if ((op.type == ExprOpType::DUP || op.type == ExprOpType::SWAP) && op.imm.u > stack.size())
             throw std::runtime_error("insufficient values on stack: " + tok);
         if (stack.size() < numOperands[static_cast<size_t>(op.type)])
             throw std::runtime_error("insufficient values on stack: " + tok);
