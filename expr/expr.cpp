@@ -214,6 +214,7 @@ ExprOp decodeToken(const std::string &token)
         { "cos",  { ExprOpType::COS } },
         { "dup",  { ExprOpType::DUP, 1 } },
         { "swap", { ExprOpType::SWAP, 2 } },
+        { "nor",  { ExprOpType::NOR, 2 } },
         { "N",    { MemoryVar::VAR_N } },
         { "X",    { MemoryVar::VAR_X } },
         { "Y",    { MemoryVar::VAR_Y } },
@@ -382,7 +383,7 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         // Check validity.
         if (op.type == ExprOpType::MEM_LOAD_U8 && op.imm.i >= numInputs)
             throw std::runtime_error("reference to undefined clip: " + tok);
-        if ((op.type == ExprOpType::DUP || op.type == ExprOpType::SWAP) && op.imm.u > stack.size())
+        if ((op.type == ExprOpType::DUP || op.type == ExprOpType::SWAP || op.type == ExprOpType::NOR) && op.imm.u > stack.size())
             throw std::runtime_error("insufficient values on stack: " + tok);
         if (stack.size() < numOperands[static_cast<size_t>(op.type)])
             throw std::runtime_error("insufficient values on stack: " + tok);
@@ -408,6 +409,19 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
             stack.push_back(tree.clone(stack[stack.size() - 1 - op.imm.u]));
         } else if (op.type == ExprOpType::SWAP) {
             std::swap(stack.back(), stack[stack.size() - 1 - op.imm.u]);
+        } else if (op.type == ExprOpType::NOR) {
+            ExpressionTreeNode *left = stack[stack.size() - 2];
+            ExpressionTreeNode *right = stack[stack.size() - 1];
+            stack.resize(stack.size() - 2);
+
+            ExpressionTreeNode *lhsNode = tree.makeNode({ ExprOpType::OR });
+            lhsNode->setLeft(left);
+            lhsNode->setRight(right);
+
+            ExpressionTreeNode *node = tree.makeNode({ ExprOpType::NOT });
+            node->setLeft(lhsNode);
+
+            stack.push_back(node);
         } else {
             size_t operands = numOperands[static_cast<size_t>(op.type)];
 

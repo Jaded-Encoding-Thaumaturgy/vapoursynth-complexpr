@@ -60,7 +60,7 @@ enum class ExprOpType {
     MUX,
 
     // Stack helpers.
-    DUP, SWAP,
+    DUP, SWAP, NOR
 };
 
 enum class FMAType {
