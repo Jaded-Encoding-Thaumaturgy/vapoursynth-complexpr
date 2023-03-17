@@ -51,6 +51,7 @@ private:
     virtual void sub(const ExprInstruction &insn) = 0;
     virtual void mul(const ExprInstruction &insn) = 0;
     virtual void div(const ExprInstruction &insn) = 0;
+    virtual void mod(const ExprInstruction &insn) = 0;
     virtual void fma(const ExprInstruction &insn) = 0;
     virtual void max(const ExprInstruction &insn) = 0;
     virtual void min(const ExprInstruction &insn) = 0;

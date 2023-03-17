@@ -504,6 +504,39 @@ do { \
         });
     }
 
+    void mod(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.src2];
+            auto dst = bytecodeRegs[insn.dst];
+
+            XmmReg r1, r2, r3, r4;
+
+            VEX1(movaps, r3, t2.first);
+            VEX1(movaps, r4, t2.second);
+            VEX1(movaps, dst.first, t1.first);
+            VEX1(movaps, dst.second, t1.second);
+            VEX2(divps, r1, dst.first, r3);
+            VEX2(divps, r2, dst.second, r4);
+            VEX1(cvttps2dq, r1, r1);
+            VEX1(cvttps2dq, r2, r2);
+            VEX1(cvtdq2ps, r1, r1);
+            VEX1(cvtdq2ps, r2, r2);
+
+            if (cpuFeatures.fma3) {
+                vfnmadd231ps(dst.first, r1, r3);
+                vfnmadd231ps(dst.second, r2, r4);
+            } else {
+                VEX2(mulps, r1, r1, r3);
+                VEX2(mulps, r2, r2, r4);
+                VEX2(subps, dst.first, dst.first, r1);
+                VEX2(subps, dst.second, dst.second, r2);
+            }
+        });
+    }
+
     void fma(const ExprInstruction &insn) override
     {
         deferred.push_back(EMIT()
@@ -1503,6 +1536,25 @@ do { \
         deferred.push_back(EMIT()
         {
             BINARYOP(vdivps);
+        });
+    }
+
+    void mod(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.src2];
+            auto t3 = bytecodeRegs[insn.dst];
+
+            YmmReg r1, r2;
+
+            vmovaps(r2, t2);
+            vmovaps(t3, t1);
+            vdivps(r1, t3, r2);
+            vcvttps2dq(r1, r1);
+            vcvtdq2ps(r1, r1);
+            vfnmadd231ps(t3, r1, r2);
         });
     }
 

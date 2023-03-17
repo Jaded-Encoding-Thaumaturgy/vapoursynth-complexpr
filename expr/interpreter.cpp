@@ -45,6 +45,7 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
         case ExprOpType::SUB: DST = SRC1 - SRC2; break;
         case ExprOpType::MUL: DST = SRC1 * SRC2; break;
         case ExprOpType::DIV: DST = SRC1 / SRC2; break;
+        case ExprOpType::MOD: DST = std::fmod(SRC1, SRC2); break;
         case ExprOpType::FMA:
             switch (static_cast<FMAType>(insn.op.imm.u)) {
             case FMAType::FMADD: DST = SRC2 * SRC3 + SRC1; break;

@@ -51,6 +51,7 @@ void ExprCompiler::addInstruction(const ExprInstruction &insn)
     case ExprOpType::SUB: sub(insn); break;
     case ExprOpType::MUL: mul(insn); break;
     case ExprOpType::DIV: div(insn); break;
+    case ExprOpType::MOD: mod(insn); break;
     case ExprOpType::FMA: fma(insn); break;
     case ExprOpType::MAX: max(insn); break;
     case ExprOpType::MIN: min(insn); break;

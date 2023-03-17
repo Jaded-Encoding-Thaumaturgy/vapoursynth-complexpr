@@ -182,6 +182,7 @@ ExprOp decodeToken(const std::string &token)
         { "-",    { ExprOpType::SUB } },
         { "*",    { ExprOpType::MUL } },
         { "/",    { ExprOpType::DIV } } ,
+        { "%",    { ExprOpType::MOD } } ,
         { "sqrt", { ExprOpType::SQRT } },
         { "abs",  { ExprOpType::ABS } },
         { "max",  { ExprOpType::MAX } },
@@ -342,6 +343,7 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         2, // SUB
         2, // MUL
         2, // DIV
+        2, // MOD
         3, // FMA
         1, // SQRT
         1, // ABS
@@ -536,6 +538,7 @@ float evalConstantExpr(const ExpressionTreeNode &node)
     case ExprOpType::SUB: return LEFT - RIGHT;
     case ExprOpType::MUL: return LEFT * RIGHT;
     case ExprOpType::DIV: return LEFT / RIGHT;
+    case ExprOpType::MOD: return std::fmod(LEFT, RIGHT);
     case ExprOpType::FMA:
         switch (static_cast<FMAType>(node.op.imm.u)) {
         case FMAType::FMADD: return RIGHTLEFT * RIGHTRIGHT + LEFT;
