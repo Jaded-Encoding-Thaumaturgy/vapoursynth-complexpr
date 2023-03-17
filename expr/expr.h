@@ -42,7 +42,7 @@ enum class ExprOpType {
     MEM_STORE_U8, MEM_STORE_U16, MEM_STORE_U32, MEM_STORE_F16, MEM_STORE_F32,
 
     // Arithmetic primitives.
-    ADD, SUB, MUL, DIV, MOD, FMA, SQRT, ABS, NEG, MAX, MIN, CMP,
+    ADD, SUB, MUL, DIV, MOD, FMA, SQRT, ABS, NEG, MAX, MIN, CLAMP, CMP,
 
     // Integer conversion.
     TRUNC, ROUND, FLOOR, CEIL,

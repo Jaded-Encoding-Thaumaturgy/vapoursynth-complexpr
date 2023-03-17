@@ -56,6 +56,7 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
             break;
         case ExprOpType::MAX: DST = std::max(SRC1, SRC2); break;
         case ExprOpType::MIN: DST = std::min(SRC1, SRC2); break;
+        case ExprOpType::CLAMP: DST = std::min(std::max(SRC1, SRC2), SRC3); break;
         case ExprOpType::EXP: DST = std::exp(SRC1); break;
         case ExprOpType::LOG: DST = std::log(SRC1); break;
         case ExprOpType::POW: DST = std::pow(SRC1, SRC2); break;

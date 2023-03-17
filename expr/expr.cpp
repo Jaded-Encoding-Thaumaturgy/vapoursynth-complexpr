@@ -187,6 +187,8 @@ ExprOp decodeToken(const std::string &token)
         { "abs",  { ExprOpType::ABS } },
         { "max",  { ExprOpType::MAX } },
         { "min",  { ExprOpType::MIN } },
+        { "clamp",{ ExprOpType::CLAMP } },
+        { "clip", { ExprOpType::CLAMP } },
         { "<",    { ExprOpType::CMP, static_cast<int>(ComparisonType::LT) } },
         { ">",    { ExprOpType::CMP, static_cast<int>(ComparisonType::NLE) } },
         { "=",    { ExprOpType::CMP, static_cast<int>(ComparisonType::EQ) } },
@@ -351,6 +353,7 @@ ExpressionTree parseExpr(const std::string &expr, const VSVideoInfo * const srcF
         1, // NEG
         2, // MAX
         2, // MIN
+        3, // CLAMP
         2, // CMP
         1, // TRUNC
         1, // ROUND
@@ -566,6 +569,7 @@ float evalConstantExpr(const ExpressionTreeNode &node)
     case ExprOpType::NEG: return -LEFT;
     case ExprOpType::MAX: return std::max(LEFT, RIGHT);
     case ExprOpType::MIN: return std::min(LEFT, RIGHT);
+    case ExprOpType::CLAMP: return std::min(std::max(LEFT, RIGHTLEFT), RIGHTRIGHT);
     case ExprOpType::CMP:
         switch (static_cast<ComparisonType>(node.op.imm.u)) {
         case ComparisonType::EQ: return bool2float(LEFT == RIGHT);

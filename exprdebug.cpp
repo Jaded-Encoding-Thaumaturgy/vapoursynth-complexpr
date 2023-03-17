@@ -49,7 +49,7 @@ using namespace vsh;
 static const char *op_names[] = {
 	"loadu8", "loadu16", "loadu32", "loadf16", "loadf32", "loadvar", "constantf", "constanti",
 	"storeu8", "storeu16", "storeu32", "storef16", "storef32",
-	"add", "sub", "mul", "div", "mod", "fma", "sqrt", "abs", "neg", "max", "min", "cmp",
+	"add", "sub", "mul", "div", "mod", "fma", "sqrt", "abs", "neg", "max", "min", "clamp", "cmp",
     "trunc", "round", "floor", "ceil",
 	"and", "or", "xor", "not",
 	"exp", "log", "pow", "sin", "cos",

@@ -615,6 +615,22 @@ do { \
             BINARYOP(minps);
         });
     }
+
+    void clamp(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.src2];
+            auto t3 = bytecodeRegs[insn.src3];
+            auto t4 = bytecodeRegs[insn.dst];
+
+            VEX2(maxps, t4.first, t1.first, t2.first);
+            VEX2(minps, t4.first, t4.first, t3.first);
+            VEX2(maxps, t4.second, t1.second, t2.second);
+            VEX2(minps, t4.second, t4.second, t3.second);
+        });
+    }
 #undef BINARYOP
 
     void round_(const ExprInstruction &insn, const int round_flag) {
@@ -1606,6 +1622,20 @@ do { \
         deferred.push_back(EMIT()
         {
             BINARYOP(vminps);
+        });
+    }
+
+    void clamp(const ExprInstruction &insn) override
+    {
+        deferred.push_back(EMIT()
+        {
+            auto t1 = bytecodeRegs[insn.src1];
+            auto t2 = bytecodeRegs[insn.src2];
+            auto t3 = bytecodeRegs[insn.src3];
+            auto t4 = bytecodeRegs[insn.dst];
+
+            vmaxps(t4, t1, t2);
+            vminps(t4, t4, t3);
         });
     }
 #undef BINARYOP

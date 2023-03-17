@@ -55,6 +55,7 @@ private:
     virtual void fma(const ExprInstruction &insn) = 0;
     virtual void max(const ExprInstruction &insn) = 0;
     virtual void min(const ExprInstruction &insn) = 0;
+    virtual void clamp(const ExprInstruction &insn) = 0;
     virtual void round_(const ExprInstruction &insn, const int round_flag) = 0;
     void round(const ExprInstruction &insn) { round_(insn,  8); };
     void floor(const ExprInstruction &insn) { round_(insn,  9); };
