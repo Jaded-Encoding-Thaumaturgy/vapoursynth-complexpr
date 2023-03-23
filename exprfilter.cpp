@@ -135,7 +135,6 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
             if constexpr (compiled) {
                 ExprCompiler::ProcessLineProc proc = d->proc[plane];
-                int niterations = (w + 7) / 8;
 
                 for (int y = 0; y < h; y++) {
                     frame_consts[MemoryVar::VAR_Y] = y;
@@ -143,7 +142,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
                     for (int i = 0; i < numInputs; i++) {
                         rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + d->frame_strides[plane][i + 1] * y);
                     }
-                    proc(rwptrs, d->ptroffsets[plane], &frame_consts[0], niterations);
+                    proc(rwptrs, d->ptroffsets[plane], &frame_consts[0]);
                 }
             } else {
                 ExprInterpreter interpreter(d->bytecode[plane].data(), d->bytecode[plane].size());
@@ -288,7 +287,9 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
             if (cpulevel <= VS_CPU_LEVEL_NONE)
                 continue;
 
-            std::tie(d->proc[i], d->procSize[i]) = expr::compile_jit(d->bytecode[i].data(), d->bytecode[i].size(), d->numInputs, cpulevel);
+            int niterations = ((d->vi.width >> (i == 0 ? 0 : d->vi.format.subSamplingW)) + 7) / 8;
+
+            std::tie(d->proc[i], d->procSize[i]) = expr::compile_jit(d->bytecode[i].data(), d->bytecode[i].size(), d->numInputs, cpulevel, niterations);
         }
 #ifdef VS_TARGET_OS_WINDOWS
         FlushInstructionCache(GetCurrentProcess(), nullptr, 0);

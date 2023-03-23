@@ -33,7 +33,7 @@ struct ExprDefaultAccumulators {
 
 class ExprCompiler {
 public:
-    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts, intptr_t niter);
+    typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts);
 private:
     virtual void load8(const ExprInstruction &insn) = 0;
     virtual void load16(const ExprInstruction &insn) = 0;
@@ -106,11 +106,11 @@ public:
 };
 
 #ifdef VS_TARGET_CPU_X86
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs);
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs);
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t niter);
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t niter);
 #endif
 
-std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel);
+std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t niter);
 
 } // namespace expr
 

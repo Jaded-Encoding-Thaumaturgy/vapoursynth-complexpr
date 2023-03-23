@@ -78,15 +78,15 @@ void ExprCompiler::addInstruction(const ExprInstruction &insn)
     }
 }
 
-std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel)
+std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t niter)
 {
 	std::unique_ptr<ExprCompiler> compiler;
 
 #ifdef VS_TARGET_CPU_X86
 	if (getCPUFeatures()->avx2 && cpulevel >= VS_CPU_LEVEL_AVX2)
-		compiler = make_ymm_compiler(numInputs);
+		compiler = make_ymm_compiler(numInputs, niter);
 	else
-		compiler = make_xmm_compiler(numInputs);
+		compiler = make_xmm_compiler(numInputs, niter);
 #endif
 
 	if (!compiler)

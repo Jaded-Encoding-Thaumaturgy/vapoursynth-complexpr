@@ -38,10 +38,10 @@ static_assert(static_cast<int>(ComparisonType::NEQ) == _CMP_NEQ_UQ, "");
 static_assert(static_cast<int>(ComparisonType::NLT) == _CMP_NLT_US, "");
 static_assert(static_cast<int>(ComparisonType::NLE) == _CMP_NLE_US, "");
 
-class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t> {
-    typedef jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t> jit;
-    friend struct jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t>;
-    friend struct jitasm::function_cdecl<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *, intptr_t>;
+class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *> {
+    typedef jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *> jit;
+    friend struct jitasm::function<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *>;
+    friend struct jitasm::function_cdecl<void, ExprCompiler128, uint8_t *, const intptr_t *, const float *>;
 
 #define SPLAT(x) { (x), (x), (x), (x) }
     static constexpr ExprUnion constData alignas(16)[72][4] = {
@@ -202,6 +202,7 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
 
     CPUFeatures cpuFeatures;
     int numInputs;
+    int niterations;
     int curLabel;
 
 #define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
@@ -1089,12 +1090,12 @@ do { \
         sincos(false, insn);
     }
 
-    void main(Reg regptrs, Reg regoffs, Reg frame_consts, Reg niter)
+    void main(Reg regptrs, Reg regoffs, Reg frame_consts)
     {
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> bytecodeRegs;
         XmmReg zero;
         VEX2(pxor, zero, zero, zero);
-        Reg constants;
+        Reg constants, niter;
         mov(constants, (uintptr_t)constData);
 
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> regAccs;
@@ -1103,6 +1104,7 @@ do { \
             f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
+        mov(niter, niterations);
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -1157,7 +1159,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler128(int numInputs) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), curLabel() {}
+    explicit ExprCompiler128(int numInputs, intptr_t niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter), curLabel() {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -1182,10 +1184,10 @@ public:
 
 constexpr ExprUnion ExprCompiler128::constData alignas(16)[72][4];
 
-class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> {
-    typedef jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t> jit;
-    friend struct jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t>;
-    friend struct jitasm::function_cdecl<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *, intptr_t>;
+class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *> {
+    typedef jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *> jit;
+    friend struct jitasm::function<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *>;
+    friend struct jitasm::function_cdecl<void, ExprCompiler256, uint8_t *, const intptr_t *, const float *>;
 
 #define SPLAT(x) { (x), (x), (x), (x), (x), (x), (x), (x) }
     static constexpr ExprUnion constData alignas(32)[71][8] = {
@@ -1344,6 +1346,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
 
     CPUFeatures cpuFeatures;
     int numInputs;
+    int niterations;
     int curLabel;
 
 #define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> & regAccs, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
@@ -1930,12 +1933,12 @@ do { \
         });
     }
 
-    void main(Reg regptrs, Reg regoffs, Reg frame_consts, Reg niter)
+    void main(Reg regptrs, Reg regoffs, Reg frame_consts)
     {
         std::unordered_map<int, YmmReg> bytecodeRegs;
         YmmReg zero;
         vpxor(zero, zero, zero);
-        Reg constants;
+        Reg constants, niter;
         mov(constants, (uintptr_t)constData);
         
         std::unordered_map<int, YmmReg> regAccs;
@@ -1944,6 +1947,7 @@ do { \
             f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
+        mov(niter, niterations);
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -1996,7 +2000,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler256(int numInputs) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs) {}
+    explicit ExprCompiler256(int numInputs, intptr_t niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter) {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -2020,14 +2024,14 @@ constexpr ExprUnion ExprCompiler256::constData alignas(32)[71][8];
 
 } // namespace
 
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs)
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t niter)
 {
-    return std::make_unique<ExprCompiler128>(numInputs);
+    return std::make_unique<ExprCompiler128>(numInputs, niter);
 }
 
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs)
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t niter)
 {
-    return std::make_unique<ExprCompiler256>(numInputs);
+    return std::make_unique<ExprCompiler256>(numInputs, niter);
 }
 
 } // namespace expr
