@@ -45,7 +45,7 @@ struct ExprData {
     std::vector<VSNode *> node;
     VSVideoInfo vi;
     std::vector<ExprInstruction> bytecode[3];
-    PlaneOp plane[3];
+    PlaneMode plane[3];
     int numInputs;
     int alignment;
     ExprCompiler::ProcessLineProc proc[3];
@@ -89,9 +89,9 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         int planes[3] = { 0, 1, 2 };
 
         const VSFrame *srcf[3] = {
-            d->plane[0] == PlaneOp::poCopy ? src[0] : nullptr,
-            d->plane[1] == PlaneOp::poCopy ? src[0] : nullptr,
-            d->plane[2] == PlaneOp::poCopy ? src[0] : nullptr
+            d->plane[0].state == PlaneOp::poCopy ? src[d->plane[0].idx] : nullptr,
+            d->plane[1].state == PlaneOp::poCopy ? src[d->plane[1].idx] : nullptr,
+            d->plane[2].state == PlaneOp::poCopy ? src[d->plane[2].idx] : nullptr
         };
 
         VSFrame *dst = vsapi->newVideoFrame2(&d->vi.format, width, height, srcf, planes, src[0], core);
@@ -116,7 +116,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         const uint8_t *srcp[numInputs] = {};
 
         for (int plane = 0; plane < d->vi.format.numPlanes; plane++) {
-            if (d->plane[plane] != PlaneOp::poProcess)
+            if (d->plane[plane].state != PlaneOp::poProcess)
                 continue;
 
             for (int i = 0; i < numInputs; i++) {
@@ -251,22 +251,39 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
         cpulevel = vs_get_cpulevel(core, vsapi);
 
     
-        for (int i = 0; i < d->vi.format.numPlanes; i++) {
+        for (int i = 0; i < 3; i++) {
+            if (i >= d->vi.format.numPlanes) {
+                d->plane[i] = { PlaneOp::poUndefined };
+                continue;
+            }
+
             d->frame_strides[i] = new ptrdiff_t[(d->numInputs + 1)];
             d->ptroffsets[i] = new intptr_t[d->alignment];
 
-            if (!expr[i].empty()) {
-                d->plane[i] = PlaneOp::poProcess;
-            } else {
+            if (expr[i].empty()) {
                 if (d->vi.format.bitsPerSample == vi[0]->format.bitsPerSample && d->vi.format.sampleType == vi[0]->format.sampleType)
-                    d->plane[i] = PlaneOp::poCopy;
+                    d->plane[i] = { PlaneOp::poCopy, 0 };
                 else
-                    d->plane[i] = PlaneOp::poUndefined;
+                    d->plane[i] = { PlaneOp::poUndefined };
 
                 continue;
             }
 
+            d->plane[i] = { PlaneOp::poProcess };
+
             d->bytecode[i] = compile(expr[i], vi, d->numInputs, d->vi);
+
+            if (d->bytecode[i].size() == 2) {
+                ExprOp lhs = d->bytecode[i][0].op;
+                ExprOp rhs = d->bytecode[i][1].op;
+
+                if (
+                    (ExprOpType::MEM_STORE_U8 <= rhs.type && rhs.type <= ExprOpType::MEM_STORE_F32)
+                    && (ExprOpType::MEM_LOAD_U8 <= lhs.type && lhs.type <= ExprOpType::MEM_LOAD_F32)
+                ) {
+                    d->plane[i] = { PlaneOp::poCopy, lhs.imm.i };
+                }
+            }
 
             if (cpulevel <= VS_CPU_LEVEL_NONE)
                 continue;

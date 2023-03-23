@@ -35,6 +35,11 @@ enum class PlaneOp {
     poProcess, poCopy, poUndefined
 };
 
+struct PlaneMode {
+    PlaneOp state;
+    int idx = -1;
+};
+
 enum class ExprOpType {
     // Terminals.
     MEM_LOAD_U8, MEM_LOAD_U16, MEM_LOAD_U32, MEM_LOAD_F16, MEM_LOAD_F32, MEM_LOAD_VAR,
