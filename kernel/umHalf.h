@@ -50,6 +50,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #endif
 
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic ignored "-Wregister"
+#endif
+
 #undef min
 #undef max
 
