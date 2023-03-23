@@ -200,7 +200,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     int err;
     int cpulevel;
 
-    bool fconsts_use = false;
+    FConstUse fconsts_use = FConstUse::none;
 
     try {
         d->numInputs = vsapi->mapNumElements(in, "clips");
@@ -302,6 +302,12 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
                     d->plane[i] = { PlaneOp::copy, lhs.imm.i };
             }
 
+            for (auto &op : d->bytecode[i]) {
+                if (op.op.type == ExprOpType::MEM_LOAD_VAR) {
+                    fconsts_use = VSMAX(fconsts_use, FConstUse::base);
+                }
+            }
+
             if (cpulevel <= VS_CPU_LEVEL_NONE)
                 continue;
             
@@ -341,9 +347,9 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     VSFilterGetFrame getFrame;
 
     if (cpulevel > VS_CPU_LEVEL_NONE)
-        getFrame = fconsts_use ? exprGetFrame<true, FConstUse::base> : exprGetFrame<true, FConstUse::none>;
+        getFrame = fconsts_use == FConstUse::base ? exprGetFrame<true, FConstUse::base> : exprGetFrame<true, FConstUse::none>;
     else
-        getFrame = fconsts_use ? exprGetFrame<false, FConstUse::base> : exprGetFrame<false, FConstUse::none>;
+        getFrame = fconsts_use == FConstUse::base ? exprGetFrame<false, FConstUse::base> : exprGetFrame<false, FConstUse::none>;
     
 
     vsapi->createVideoFilter(out, "Expr", &d->vi, getFrame, exprFree, fmParallel, deps.data(), d->numInputs, d.get(), core);
