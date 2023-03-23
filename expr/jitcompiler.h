@@ -24,6 +24,8 @@
 #include <cstddef>
 #include <memory>
 #include "expr.h"
+#include "../kernel/cpulevel.h"
+#include "../kernel/cpufeatures.h"
 
 namespace expr {
 
@@ -32,6 +34,11 @@ struct ExprDefaultAccumulators {
 };
 
 class ExprCompiler {
+public:
+    CPUFeatures cpuFeatures;
+    int numInputs;
+    intptr_t *niterations;
+    int curLabel;
 public:
     typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts);
 private:
@@ -103,14 +110,16 @@ public:
 
         addPostInstructions(bytecode, numInsns, accs);
     }
+
+    ExprCompiler(int numInputs, intptr_t *niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter) {}
 };
 
 #ifdef VS_TARGET_CPU_X86
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t niter);
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t niter);
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter);
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter);
 #endif
 
-std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t niter);
+std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t *niter);
 
 } // namespace expr
 

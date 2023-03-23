@@ -24,9 +24,8 @@
 #include <unordered_map>
 #include <vector>
 #include <immintrin.h>
-#include "../kernel/cpufeatures.h"
-#include "jitasm.h"
 #include "jitcompiler.h"
+#include "jitasm.h"
 
 namespace expr {
 namespace {
@@ -199,11 +198,6 @@ class ExprCompiler128 : public ExprCompiler, private jitasm::function<void, Expr
 
     // JitASM compiles everything from main(), so record the operations for later.
     std::vector<std::function<void(Reg, XmmReg, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &, Reg, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &)>> deferred, prolog;
-
-    CPUFeatures cpuFeatures;
-    int numInputs;
-    int niterations;
-    int curLabel;
 
 #define EMIT() [this, insn](Reg regptrs, XmmReg zero, Reg constants, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &regAccs, Reg frame_consts, std::unordered_map<int, std::pair<XmmReg, XmmReg>> &bytecodeRegs)
 #define VEX1(op, arg1, arg2) \
@@ -1089,8 +1083,8 @@ do { \
     {
         sincos(false, insn);
     }
-
-    void main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    
+    void main(jitasm::Reg regptrs, jitasm::Reg regoffs, jitasm::Reg frame_consts)
     {
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> bytecodeRegs;
         XmmReg zero;
@@ -1104,7 +1098,7 @@ do { \
             f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
-        mov(niter, niterations);
+        mov(niter, niterations[0]);
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -1159,7 +1153,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler128(int numInputs, intptr_t niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter), curLabel() {}
+    explicit ExprCompiler128(int numInputs, intptr_t *niter) : ExprCompiler(numInputs, niter) {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -1343,11 +1337,6 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
 
     // JitASM compiles everything from main(), so record the operations for later.
     std::vector<std::function<void(Reg, YmmReg, Reg, std::unordered_map<int, YmmReg> &, Reg, std::unordered_map<int, YmmReg> &)>> deferred, prolog;
-
-    CPUFeatures cpuFeatures;
-    int numInputs;
-    int niterations;
-    int curLabel;
 
 #define EMIT() [this, insn](Reg regptrs, YmmReg zero, Reg constants, std::unordered_map<int, YmmReg> & regAccs, Reg frame_consts, std::unordered_map<int, YmmReg> &bytecodeRegs)
 
@@ -1933,7 +1922,7 @@ do { \
         });
     }
 
-    void main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    void main(jitasm::Reg regptrs, jitasm::Reg regoffs, jitasm::Reg frame_consts)
     {
         std::unordered_map<int, YmmReg> bytecodeRegs;
         YmmReg zero;
@@ -1947,7 +1936,7 @@ do { \
             f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
         }
 
-        mov(niter, niterations);
+        mov(niter, niterations[0]);
         L("wloop");
 
         for (const auto &f : deferred) {
@@ -2000,7 +1989,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler256(int numInputs, intptr_t niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter) {}
+    explicit ExprCompiler256(int numInputs, intptr_t *niter) : ExprCompiler(numInputs, niter) {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -2024,12 +2013,12 @@ constexpr ExprUnion ExprCompiler256::constData alignas(32)[71][8];
 
 } // namespace
 
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t niter)
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter)
 {
     return std::make_unique<ExprCompiler128>(numInputs, niter);
 }
 
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t niter)
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter)
 {
     return std::make_unique<ExprCompiler256>(numInputs, niter);
 }

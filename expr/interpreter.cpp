@@ -9,7 +9,7 @@
 #include <vector>
 #include "interpreter.h"
 
-ExprInterpreter::ExprInterpreter(const ExprInstruction *bytecode, size_t numInsns) : bytecode(bytecode), numInsns(numInsns)
+ExprInterpreter::ExprInterpreter(const ExprInstruction *bytecode, size_t numInsns, const VSVideoInfo **srcFormats) : bytecode(bytecode), numInsns(numInsns), srcFormats(srcFormats)
 {
     int maxreg = 0;
     for (size_t i = 0; i < numInsns; ++i) {

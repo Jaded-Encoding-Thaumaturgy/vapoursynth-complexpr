@@ -19,8 +19,6 @@
 */
 
 #include <cassert>
-#include "../kernel/cpufeatures.h"
-#include "../kernel/cpulevel.h"
 #include "jitcompiler.h"
 
 namespace expr {
@@ -78,7 +76,7 @@ void ExprCompiler::addInstruction(const ExprInstruction &insn)
     }
 }
 
-std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t niter)
+std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t *niter)
 {
 	std::unique_ptr<ExprCompiler> compiler;
 
