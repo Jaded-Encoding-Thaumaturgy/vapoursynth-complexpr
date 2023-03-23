@@ -1711,7 +1711,7 @@ std::vector<ExprInstruction> compile(ExpressionTree &tree, const VSVideoInfo &vi
         store.op.type = ExprOpType::MEM_STORE_F32;
 
     if ((store.op.type == ExprOpType::MEM_STORE_U16) || (store.op.type == ExprOpType::MEM_STORE_U32))
-        store.op.imm.u = format.bitsPerSample;
+        store.op.imm.i = format.bitsPerSample;
 
     store.src1 = code.back().dst;
     code.push_back(store);

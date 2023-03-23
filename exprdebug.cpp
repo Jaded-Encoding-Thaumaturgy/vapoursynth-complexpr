@@ -139,7 +139,7 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
                 case ExprOpType::MEM_LOAD_U32:
                 case ExprOpType::MEM_LOAD_F16:
                 case ExprOpType::MEM_LOAD_F32:
-                    asmCode << ',' << clipNamePrefix << insn.op.imm.u;
+                    asmCode << ',' << clipNamePrefix << insn.op.imm.i;
                     break;
                 case ExprOpType::MEM_LOAD_VAR:
                     asmCode << ',' << load_var_names[insn.op.imm.u + 1];

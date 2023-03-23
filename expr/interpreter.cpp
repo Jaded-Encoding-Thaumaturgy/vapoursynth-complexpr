@@ -28,11 +28,11 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
 #define SRC3 registers[insn.src3]
 #define DST registers[insn.dst]
         switch (insn.op.type) {
-        case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.u])[x]; break;
-        case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.u])[x]; break;
-        case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.u])[x]; break;
-        case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.u])[x]; break;
-        case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.u])[x]; break;
+        case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.i])[x]; break;
+        case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.i])[x]; break;
+        case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.i])[x]; break;
+        case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.i])[x]; break;
+        case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.i])[x]; break;
         case ExprOpType::MEM_LOAD_VAR:
             switch (static_cast<MemoryVar>(insn.op.imm.u)) {
             case MemoryVar::VAR_X: DST = x; break;
@@ -85,8 +85,8 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
         case ExprOpType::XOR: DST = bool2float((float2bool(SRC1) != float2bool(SRC2))); break;
         case ExprOpType::NOT: DST = bool2float(!float2bool(SRC1)); break;
         case ExprOpType::MEM_STORE_U8:  reinterpret_cast<uint8_t *>(dstp)[x] = clamp_int<uint8_t>(SRC1); return;
-        case ExprOpType::MEM_STORE_U16: reinterpret_cast<uint16_t *>(dstp)[x] = clamp_int<uint16_t>(SRC1, insn.op.imm.u); return;
-        case ExprOpType::MEM_STORE_U32: reinterpret_cast<uint32_t *>(dstp)[x] = clamp_int<uint32_t>(SRC1, insn.op.imm.u); return;
+        case ExprOpType::MEM_STORE_U16: reinterpret_cast<uint16_t *>(dstp)[x] = clamp_int<uint16_t>(SRC1, insn.op.imm.i); return;
+        case ExprOpType::MEM_STORE_U32: reinterpret_cast<uint32_t *>(dstp)[x] = clamp_int<uint32_t>(SRC1, insn.op.imm.i); return;
         case ExprOpType::MEM_STORE_F16: reinterpret_cast<float16 *>(dstp)[x] = (float16)SRC1; return;
         case ExprOpType::MEM_STORE_F32: reinterpret_cast<float *>(dstp)[x] = SRC1; return;
         default: fprintf(stderr, "%s", "illegal opcode\n"); std::terminate(); return;

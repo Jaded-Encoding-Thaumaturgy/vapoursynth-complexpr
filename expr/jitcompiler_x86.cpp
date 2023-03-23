@@ -262,7 +262,7 @@ do { \
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             VEX1(movq, t1.first, mmword_ptr[a]);
             VEX2(punpcklbw, t1.first, t1.first, zero);
             VEX2(punpckhwd, t1.second, t1.first, zero);
@@ -278,7 +278,7 @@ do { \
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             VEX1(movdqa, t1.first, xmmword_ptr[a]);
             VEX2(punpckhwd, t1.second, t1.first, zero);
             VEX2(punpcklwd, t1.first, t1.first, zero);
@@ -293,7 +293,7 @@ do { \
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             VEX1(movdqa, t1.first, xmmword_ptr[a]);
             VEX1(movdqa, t1.second, xmmword_ptr[a + 16]);
             VEX1(cvtdq2ps, t1.first, t1.first);
@@ -307,7 +307,7 @@ do { \
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vcvtph2ps(t1.first, qword_ptr[a]);
             vcvtph2ps(t1.second, qword_ptr[a + 8]);
         });
@@ -319,7 +319,7 @@ do { \
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             VEX1(movdqa, t1.first, xmmword_ptr[a]);
             VEX1(movdqa, t1.second, xmmword_ptr[a + 16]);
         });
@@ -389,7 +389,7 @@ do { \
     {
         deferred.push_back(EMIT()
         {
-            int depth = insn.op.imm.u;
+            int depth = insn.op.imm.i;
             auto t1 = bytecodeRegs[insn.src1];
             XmmReg r1, r2, limit;
             Reg a;
@@ -421,7 +421,7 @@ do { \
     {
         deferred.push_back(EMIT()
         {
-            int depth = insn.op.imm.u;
+            int depth = insn.op.imm.i;
             auto t1 = bytecodeRegs[insn.src1];
             XmmReg r1, r2, limit;
             Reg a;
@@ -1354,7 +1354,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vpmovzxbd(t1, mmword_ptr[a]);
             vcvtdq2ps(t1, t1);
         });
@@ -1366,7 +1366,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vpmovzxwd(t1, xmmword_ptr[a]);
             vcvtdq2ps(t1, t1);
         });
@@ -1378,7 +1378,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vcvtdq2ps(t1, ymmword_ptr[a]);
         });
     }
@@ -1389,7 +1389,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vcvtph2ps(t1, xmmword_ptr[a]);
         });
     }
@@ -1400,7 +1400,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
         {
             auto t1 = bytecodeRegs[insn.dst];
             Reg a;
-            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.u + 1)]);
+            mov(a, ptr[regptrs + sizeof(void *) * (insn.op.imm.i + 1)]);
             vmovaps(t1, ymmword_ptr[a]);
         });
     }
@@ -1465,7 +1465,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
     {
         deferred.push_back(EMIT()
         {
-            int depth = insn.op.imm.u;
+            int depth = insn.op.imm.i;
             auto t1 = bytecodeRegs[insn.src1];
             YmmReg r1, limit;
             Reg a;
@@ -1482,7 +1482,7 @@ class ExprCompiler256 : public ExprCompiler, private jitasm::function<void, Expr
     {
         deferred.push_back(EMIT()
         {
-            int depth = insn.op.imm.u;
+            int depth = insn.op.imm.i;
             auto t1 = bytecodeRegs[insn.src1];
             YmmReg r1, limit;
             Reg a;
