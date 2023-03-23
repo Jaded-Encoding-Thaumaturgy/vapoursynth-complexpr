@@ -34,6 +34,8 @@
 // - Fix: false codegen when rearranging multiple working registers in MoveGenerator by
 //   tracking real register usage for an xchg sequence
 
+#include <stdint.h>
+
 #pragma once
 #ifndef JITASM_H
 #define JITASM_H
@@ -103,9 +105,9 @@
 #endif
 
 #if defined(JITASM_GCC)
-#define JITASM_ATTRIBUTE_WEAK __attribute__((weak))
+#define JITASM_ATTRIBUTE_WEAK
 #elif defined(_MSC_VER)
-#define JITASM_ATTRIBUTE_WEAK __declspec(selectany)
+#define JITASM_ATTRIBUTE_WEAK
 #else
 #define JITASM_ATTRIBUTE_WEAK
 #endif
@@ -114,6 +116,10 @@
 #pragma warning( push )
 #pragma warning( disable : 4127 )	// conditional expression is constant.
 #pragma warning( disable : 4201 )	// nonstandard extension used : nameless struct/union
+#endif
+
+#if defined(JITASM_GCC)
+#pragma GCC diagnostic ignored "-Wignored-attributes"
 #endif
 
 #ifdef ASSERT
@@ -819,7 +825,7 @@ enum InstrID
 	I_NEG, I_NOP, I_NOT,
 	I_OR, I_OUT, I_OUTS_B, I_OUTS_W, I_OUTS_D,
 	I_POP, I_POPAD, I_POPF, I_POPFD, I_POPFQ, I_PUSH, I_PUSHAD, I_PUSHF, I_PUSHFD, I_PUSHFQ,
-	I_RDMSR, I_RDPMC, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_RSM, 
+	I_RDMSR, I_RDPMC, I_RDTSC, I_RET, I_RCL, I_RCR, I_ROL, I_ROR, I_RSM,
 	I_SAR, I_SHL, I_SHR, I_SBB, I_SCAS_B, I_SCAS_W, I_SCAS_D, I_SCAS_Q, I_SETCC, I_SHLD, I_SHRD, I_SGDT, I_SIDT, I_SLDT, I_SMSW, I_STC, I_STD, I_STI,
 	I_STOS_B, I_STOS_W, I_STOS_D, I_STOS_Q, I_SUB, I_SWAPGS, I_SYSCALL, I_SYSENTER, I_SYSEXIT, I_SYSRET,
 	I_TEST,
@@ -847,7 +853,7 @@ enum InstrID
 
 	I_ADDPS, I_ADDSS, I_ADDPD, I_ADDSD, I_ADDSUBPS, I_ADDSUBPD, I_ANDPS, I_ANDPD, I_ANDNPS, I_ANDNPD,
 	I_BLENDPS, I_BLENDPD, I_BLENDVPS, I_BLENDVPD,
-	I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD, I_CRC32, 
+	I_CLFLUSH, I_CMPPS, I_CMPSS, I_CMPPD, I_CMPSD, I_COMISS, I_COMISD, I_CRC32,
 	I_CVTDQ2PD, I_CVTDQ2PS, I_CVTPD2DQ, I_CVTPD2PI, I_CVTPD2PS, I_CVTPI2PD, I_CVTPI2PS, I_CVTPS2DQ, I_CVTPS2PD, I_CVTPS2PI, I_CVTSD2SI,
 	I_CVTSD2SS, I_CVTSI2SD, I_CVTSI2SS, I_CVTSS2SD, I_CVTSS2SI, I_CVTTPD2DQ, I_CVTTPD2PI, I_CVTTPS2DQ, I_CVTTPS2PI, I_CVTTSD2SI, I_CVTTSS2SI,
 	I_DIVPS, I_DIVSS, I_DIVPD, I_DIVSD, I_DPPS, I_DPPD,
@@ -866,7 +872,7 @@ enum InstrID
 	I_PBLENDVB, I_PBLENDW,
 	I_PCMPEQB, I_PCMPEQW, I_PCMPEQD, I_PCMPEQQ, I_PCMPESTRI, I_PCMPESTRM, I_PCMPISTRI, I_PCMPISTRM, I_PCMPGTB, I_PCMPGTW, I_PCMPGTD, I_PCMPGTQ,
 	I_PEXTRB, I_PEXTRW, I_PEXTRD, I_PEXTRQ,
-	I_PHADDW, I_PHADDD, I_PHADDSW, I_PHMINPOSUW, I_PHSUBW, I_PHSUBD, I_PHSUBSW, 
+	I_PHADDW, I_PHADDD, I_PHADDSW, I_PHMINPOSUW, I_PHSUBW, I_PHSUBD, I_PHSUBSW,
 	I_PINSRB, I_PINSRW, I_PINSRD, I_PINSRQ,
 	I_PMADDUBSW, I_PMADDWD, I_PMAXSB, I_PMAXSW, I_PMAXSD, I_PMAXUB, I_PMAXUW, I_PMAXUD, I_PMINSB, I_PMINSW, I_PMINSD, I_PMINUB, I_PMINUW,
 	I_PMINUD, I_PMOVMSKB, I_PMOVSXBW, I_PMOVSXBD, I_PMOVSXBQ, I_PMOVSXWD, I_PMOVSXWQ, I_PMOVSXDQ, I_PMOVZXBW, I_PMOVZXBD, I_PMOVZXBQ, I_PMOVZXWD,
@@ -8609,8 +8615,8 @@ namespace detail {
 #else
 			if (val_.IsMem()) {
 				// from memory
-				Mem32 lo(val_.GetAddressBaseSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp());
-				Mem32 hi(val_.GetAddressBaseSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
+				Mem32 lo(val_.GetAddressBaseSize(), val_.GetAddressIndexSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp());
+				Mem32 hi(val_.GetAddressBaseSize(), val_.GetAddressIndexSize(), val_.GetBase(), val_.GetIndex(), val_.GetScale(), val_.GetDisp() + 4);
 				f.mov(f.eax, lo);
 				f.mov(f.edx, hi);
 			} else if (val_.IsImm()) {
