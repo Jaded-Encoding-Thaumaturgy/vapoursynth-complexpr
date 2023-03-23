@@ -113,10 +113,8 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
                 d->frame_strides[plane][0] = vsapi->getStride(dst, plane);
                 for (int i = 0; i < numInputs; i++) {
-                    if (d->node[i]) {
-                        d->frame_strides[plane][i + 1] = vsapi->getStride(src[i], VSMIN(plane, d->vis[i]->format.numPlanes - 1));
-                        d->ptroffsets[plane][i + 1] = d->vis[i]->format.bytesPerSample * 8;
-                    }
+                    d->frame_strides[plane][i + 1] = vsapi->getStride(src[i], VSMIN(plane, d->vis[i]->format.numPlanes - 1));
+                    d->ptroffsets[plane][i + 1] = d->vis[i]->format.bytesPerSample * 8;
                 }
             }
 
@@ -130,8 +128,7 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
                 continue;
 
             for (int i = 0; i < numInputs; i++) {
-                if (d->node[i])
-                    srcp[i] = vsapi->getReadPtr(src[i], plane);
+                srcp[i] = vsapi->getReadPtr(src[i], plane);
             }
 
             uint8_t *dstp = vsapi->getWritePtr(dst, plane);
@@ -205,8 +202,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
 
         d->vis = std::vector<const VSVideoInfo *>(d->numInputs);
         for (int i = 0; i < d->numInputs; i++) {
-            if (d->node[i])
-                d->vis[i] = vsapi->getVideoInfo(d->node[i]);
+            d->vis[i] = vsapi->getVideoInfo(d->node[i]);
         }
 
         for (int i = 0; i < d->numInputs; i++) {
