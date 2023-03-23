@@ -31,8 +31,12 @@ namespace expr {
 
 static const std::string clipNamePrefix { "src" };
 
+enum class FConstUse {
+    none, base,
+};
+
 enum class PlaneOp {
-    poProcess, poCopy, poUndefined
+    process, copy, undefined
 };
 
 struct PlaneMode {
@@ -85,9 +89,9 @@ enum class ComparisonType {
 };
 
 enum MemoryVar {
-    // Special checked value
+    // Special sentinel value
     VAR_X = -1, // the current column
-    // Value used as index for frame_consts 
+    // Following values used as index for frame_consts 
     VAR_Y = 0, // the current row
     VAR_N = 1, // current frame number
     VAR_WIDTH = 2, // the current plane width

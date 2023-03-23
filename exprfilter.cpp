@@ -82,7 +82,7 @@ bool canCopyPlane(const VSVideoInfo *src, const VSVideoInfo *dst) {
     );
 }
 
-template <bool compiled>
+template <bool compiled, FConstUse fconsts_use>
 static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
     ExprData *d = static_cast<ExprData *>(instanceData);
     int numInputs = d->numInputs;
@@ -100,9 +100,9 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         int width = vsapi->getFrameWidth(src[0], 0);
 
         const VSFrame *srcf[3] = {
-            d->plane[0].state == PlaneOp::poCopy ? src[d->plane[0].idx] : nullptr,
-            d->plane[1].state == PlaneOp::poCopy ? src[d->plane[1].idx] : nullptr,
-            d->plane[2].state == PlaneOp::poCopy ? src[d->plane[2].idx] : nullptr
+            d->plane[0].state == PlaneOp::copy ? src[d->plane[0].idx] : nullptr,
+            d->plane[1].state == PlaneOp::copy ? src[d->plane[1].idx] : nullptr,
+            d->plane[2].state == PlaneOp::copy ? src[d->plane[2].idx] : nullptr
         };
 
         VSFrame *dst = vsapi->newVideoFrame2(&d->vi.format, width, height, srcf, d->planes, src[0], core);
@@ -122,9 +122,16 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
         }
 
         const uint8_t *srcp[numInputs] = {};
+        
+        std::vector<float> frame_consts;
+
+        if constexpr (fconsts_use > FConstUse::none) {
+            frame_consts.resize(MemoryVar::MV_SIZE, 0.0f);
+            frame_consts[MemoryVar::VAR_N] = (float)n;;
+        }
 
         for (int plane = 0; plane < d->vi.format.numPlanes; plane++) {
-            if (d->plane[plane].state != PlaneOp::poProcess)
+            if (d->plane[plane].state != PlaneOp::process)
                 continue;
 
             for (int i = 0; i < numInputs; i++) {
@@ -135,20 +142,24 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
             int h = vsapi->getFrameHeight(dst, plane);
             int w = vsapi->getFrameWidth(dst, plane);
 
-            std::vector<float> frame_consts(MemoryVar::MV_SIZE, 0.0f);
-            frame_consts[MemoryVar::VAR_N] = (float)n;
-            frame_consts[MemoryVar::VAR_WIDTH] = (float)w;
-            frame_consts[MemoryVar::VAR_HEIGHT] = (float)h;
+            if constexpr (fconsts_use > FConstUse::none) {
+                frame_consts[MemoryVar::VAR_WIDTH] = (float)w;
+                frame_consts[MemoryVar::VAR_HEIGHT] = (float)h;
+            }
 
             if constexpr (compiled) {
                 ExprCompiler::ProcessLineProc proc = d->proc[plane];
 
                 for (int y = 0; y < h; y++) {
-                    frame_consts[MemoryVar::VAR_Y] = y;
+                    if constexpr (fconsts_use > FConstUse::none) {
+                        frame_consts[MemoryVar::VAR_Y] = y;
+                    }
+
                     uint8_t *rwptrs[d->alignment] = { dstp + d->frame_strides[plane][0] * y };
                     for (int i = 0; i < numInputs; i++) {
                         rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + d->frame_strides[plane][i + 1] * y);
                     }
+
                     proc(rwptrs, d->ptroffsets[plane], &frame_consts[0]);
                 }
             } else {
@@ -156,14 +167,13 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
                 for (int y = 0; y < h; y++) {
                     frame_consts[MemoryVar::VAR_Y] = y;
-                    for (int x = 0; x < w; x++) {
+                    for (int x = 0; x < w; x++)
                         interpreter.eval(srcp, dstp, &frame_consts[0], x);
-                    }
 
+                    dstp += d->frame_strides[plane][0];
                     for (int i = 0; i < numInputs; i++) {
                         srcp[i] += d->frame_strides[plane][i + 1];
                     }
-                    dstp += d->frame_strides[plane][0];
                 }
             }
         }
@@ -189,6 +199,8 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     std::unique_ptr<ExprData> d(new ExprData);
     int err;
     int cpulevel;
+
+    bool fconsts_use = false;
 
     try {
         d->numInputs = vsapi->mapNumElements(in, "clips");
@@ -257,7 +269,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     
         for (int i = 0; i < 3; i++) {
             if (i >= d->vi.format.numPlanes) {
-                d->plane[i] = { PlaneOp::poUndefined };
+                d->plane[i] = { PlaneOp::undefined };
                 continue;
             }
 
@@ -266,15 +278,15 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
 
             if (expr[i].empty()) {
                 if (canCopyPlane(&d->vi, d->vis[0])) {
-                    d->plane[i] = { PlaneOp::poCopy, 0 };
+                    d->plane[i] = { PlaneOp::copy, 0 };
                 } else {
-                    d->plane[i] = { PlaneOp::poUndefined };
+                    d->plane[i] = { PlaneOp::undefined };
                 }
 
                 continue;
             }
 
-            d->plane[i] = { PlaneOp::poProcess };
+            d->plane[i] = { PlaneOp::process };
 
             d->bytecode[i] = compile(expr[i], d->vis.data(), d->numInputs, d->vi);
 
@@ -287,7 +299,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
                     && (ExprOpType::MEM_LOAD_U8 <= lhs.type && lhs.type <= ExprOpType::MEM_LOAD_F32)
                     && canCopyPlane(&d->vi, vsapi->getVideoInfo(d->node[lhs.imm.i]))
                 )
-                    d->plane[i] = { PlaneOp::poCopy, lhs.imm.i };
+                    d->plane[i] = { PlaneOp::copy, lhs.imm.i };
             }
 
             if (cpulevel <= VS_CPU_LEVEL_NONE)
@@ -313,9 +325,9 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     }
 
     for (int i = 0; i < 3; i++) {
-        int idx = (d->plane[i].state == PlaneOp::poCopy) ? d->plane[i].idx : 0;
+        int idx = (d->plane[i].state == PlaneOp::copy) ? d->plane[i].idx : 0;
 
-        if (d->plane[i].state == PlaneOp::poCopy) {
+        if (d->plane[i].state == PlaneOp::copy) {
             d->planes[i] = VSMIN(i, d->vis[idx]->format.numPlanes - 1);
         } else {
             d->planes[i] = i;
@@ -329,9 +341,10 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     VSFilterGetFrame getFrame;
 
     if (cpulevel > VS_CPU_LEVEL_NONE)
-        getFrame = exprGetFrame<true>;
+        getFrame = fconsts_use ? exprGetFrame<true, FConstUse::base> : exprGetFrame<true, FConstUse::none>;
     else
-        getFrame = exprGetFrame<false>;
+        getFrame = fconsts_use ? exprGetFrame<false, FConstUse::base> : exprGetFrame<false, FConstUse::none>;
+    
 
     vsapi->createVideoFilter(out, "Expr", &d->vi, getFrame, exprFree, fmParallel, deps.data(), d->numInputs, d.get(), core);
 
