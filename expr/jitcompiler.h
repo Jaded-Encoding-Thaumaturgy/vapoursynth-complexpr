@@ -38,6 +38,7 @@ public:
     CPUFeatures cpuFeatures;
     int numInputs;
     intptr_t *niterations;
+    bool unsafe;
     int curLabel;
 public:
     typedef void (*ProcessLineProc)(void *rwptrs, intptr_t *ptroff, const float *consts);
@@ -111,15 +112,15 @@ public:
         addPostInstructions(bytecode, numInsns, accs);
     }
 
-    ExprCompiler(int numInputs, intptr_t *niter) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter) {}
+    ExprCompiler(int numInputs, intptr_t *niter, bool unsafe) : cpuFeatures(*getCPUFeatures()), numInputs(numInputs), niterations(niter), unsafe(unsafe) {}
 };
 
 #ifdef VS_TARGET_CPU_X86
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter);
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter);
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter, bool unsafe);
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter, bool unsafe);
 #endif
 
-std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t *niter);
+std::pair<ExprCompiler::ProcessLineProc, size_t> compile_jit(const ExprInstruction *bytecode, size_t numInsns, int numInputs, int cpulevel, intptr_t *niter, bool unsafe);
 
 } // namespace expr
 

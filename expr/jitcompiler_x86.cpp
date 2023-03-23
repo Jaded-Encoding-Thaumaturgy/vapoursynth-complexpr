@@ -1086,6 +1086,15 @@ do { \
     
     void main(jitasm::Reg regptrs, jitasm::Reg regoffs, jitasm::Reg frame_consts)
     {
+        if (unsafe) {
+            _unsafe_main(regptrs, regoffs, frame_consts);
+        } else {
+            _safe_main(regptrs, regoffs, frame_consts);
+        }
+    }
+
+    void _safe_main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    {
         std::unordered_map<int, std::pair<XmmReg, XmmReg>> bytecodeRegs;
         XmmReg zero;
         VEX2(pxor, zero, zero, zero);
@@ -1127,6 +1136,54 @@ do { \
         jnz("wloop");
     }
 
+    void _unsafe_main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    {
+        std::unordered_map<int, std::pair<XmmReg, XmmReg>> bytecodeRegs;
+        XmmReg zero;
+        VEX2(pxor, zero, zero, zero);
+        Reg constants;
+        std::vector<Reg> niter(numInputs + 1); 
+        mov(constants, (uintptr_t)constData);
+
+        for (int i = 0; i < numInputs + 1; i++) {
+            niter[i] = Reg();
+            mov(niter[i], niterations[i]);
+        } 
+
+        std::unordered_map<int, std::pair<XmmReg, XmmReg>> regAccs;
+
+        for (const auto &f : prolog) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
+        L("wloop");
+
+        for (const auto &f : deferred) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
+#if UINTPTR_MAX > UINT32_MAX
+        for (int i = 0; i < numInputs / 2 + 1; i++) {
+            XmmReg r1, r2;
+            VEX1(movdqu, r1, xmmword_ptr[regptrs + 16 * i]);
+            VEX1(movdqu, r2, xmmword_ptr[regoffs + 16 * i]);
+            VEX2(paddq, r1, r1, r2);
+            VEX1(movdqu, xmmword_ptr[regptrs + 16 * i], r1);
+        }
+#else
+        for (int i = 0; i < numInputs / 4 + 1; i++) {
+            XmmReg r1, r2;
+            VEX1(movdqu, r1, xmmword_ptr[regptrs + 16 * i]);
+            VEX1(movdqu, r2, xmmword_ptr[regoffs + 16 * i]);
+            VEX2(paddd, r1, r1, r2);
+            VEX1(movdqu, xmmword_ptr[regptrs + 16 * i], r1);
+        }
+#endif
+
+        jit::sub(niter[0], 1);
+        jnz("wloop");
+    }
+
     void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
         if (accs.xposition) {
             ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
@@ -1153,7 +1210,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler128(int numInputs, intptr_t *niter) : ExprCompiler(numInputs, niter) {}
+    explicit ExprCompiler128(int numInputs, intptr_t *niter, bool unsafe) : ExprCompiler(numInputs, niter, unsafe) {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -1924,6 +1981,15 @@ do { \
 
     void main(jitasm::Reg regptrs, jitasm::Reg regoffs, jitasm::Reg frame_consts)
     {
+        if (unsafe) {
+            _unsafe_main(regptrs, regoffs, frame_consts);
+        } else {
+            _safe_main(regptrs, regoffs, frame_consts);
+        }
+    }
+
+    void _safe_main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    {
         std::unordered_map<int, YmmReg> bytecodeRegs;
         YmmReg zero;
         vpxor(zero, zero, zero);
@@ -1965,6 +2031,54 @@ do { \
         jnz("wloop");
     }
 
+    void _unsafe_main(Reg regptrs, Reg regoffs, Reg frame_consts)
+    {
+        std::unordered_map<int, YmmReg> bytecodeRegs;
+        YmmReg zero;
+        vpxor(zero, zero, zero);
+        Reg constants;
+        std::vector<Reg> niter(numInputs + 1); 
+        mov(constants, (uintptr_t)constData);
+        
+        std::unordered_map<int, YmmReg> regAccs;
+
+        for (int i = 0; i < numInputs + 1; i++) {
+            niter[i] = Reg();
+            mov(niter[i], niterations[i]);
+        } 
+
+        for (const auto &f : prolog) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
+        L("wloop");
+
+        for (const auto &f : deferred) {
+            f(regptrs, zero, constants, regAccs, frame_consts, bytecodeRegs);
+        }
+
+#if UINTPTR_MAX > UINT32_MAX
+        for (int i = 0; i < numInputs / 4 + 1; i++) {
+            YmmReg r1, r2;
+            vmovdqu(r1, ymmword_ptr[regptrs + 32 * i]);
+            vmovdqu(r2, ymmword_ptr[regoffs + 32 * i]);
+            vpaddq(r1, r1, r2);
+            vmovdqu(ymmword_ptr[regptrs + 32 * i], r1);
+        }
+#else
+        for (int i = 0; i < numInputs / 8 + 1; i++) {
+            YmmReg r1, r2;
+            vmovdqu(r1, ymmword_ptr[regptrs + 32 * i]);
+            vmovdqu(r2, ymmword_ptr[regoffs + 32 * i]);
+            vpaddd(r1, r1, r2);
+            vmovdqu(ymmword_ptr[regptrs + 32 * i], r1);
+        }
+#endif
+
+        jit::sub(niter[0], 1);
+        jnz("wloop");
+    }
+
     void addPreInstructions(const ExprInstruction *bytecode, size_t numInsns, ExprDefaultAccumulators &accs) override {
         if (accs.xposition) {
             ExprInstruction insn(ExprOpType::MEM_LOAD_VAR);
@@ -1989,7 +2103,7 @@ do { \
     }
 
 public:
-    explicit ExprCompiler256(int numInputs, intptr_t *niter) : ExprCompiler(numInputs, niter) {}
+    explicit ExprCompiler256(int numInputs, intptr_t *niter, bool unsafe) : ExprCompiler(numInputs, niter, unsafe) {}
 
     std::pair<ProcessLineProc, size_t> getCode() override
     {
@@ -2013,14 +2127,14 @@ constexpr ExprUnion ExprCompiler256::constData alignas(32)[71][8];
 
 } // namespace
 
-std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter)
+std::unique_ptr<ExprCompiler> make_xmm_compiler(int numInputs, intptr_t *niter, bool unsafe)
 {
-    return std::make_unique<ExprCompiler128>(numInputs, niter);
+    return std::make_unique<ExprCompiler128>(numInputs, niter, unsafe);
 }
 
-std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter)
+std::unique_ptr<ExprCompiler> make_ymm_compiler(int numInputs, intptr_t *niter, bool unsafe)
 {
-    return std::make_unique<ExprCompiler256>(numInputs, niter);
+    return std::make_unique<ExprCompiler256>(numInputs, niter, unsafe);
 }
 
 } // namespace expr

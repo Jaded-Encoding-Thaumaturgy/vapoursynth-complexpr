@@ -82,7 +82,7 @@ bool canCopyPlane(const VSVideoInfo *src, const VSVideoInfo *dst) {
     );
 }
 
-template <bool compiled, FConstUse fconsts_use>
+template <bool compiled, bool unsafe, FConstUse fconsts_use>
 static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *instanceData, void **frameData, VSFrameContext *frameCtx, VSCore *core, const VSAPI *vsapi) {
     ExprData *d = static_cast<ExprData *>(instanceData);
     int numInputs = d->numInputs;
@@ -135,7 +135,10 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
                 continue;
 
             for (int i = 0; i < numInputs; i++) {
-                srcp[i] = vsapi->getReadPtr(src[i], plane);
+                if constexpr (unsafe)
+                    srcp[i] = vsapi->getReadPtr(src[i], VSMIN(plane, d->vis[i]->format.numPlanes - 1));
+                else
+                    srcp[i] = vsapi->getReadPtr(src[i], plane);
             }
 
             uint8_t *dstp = vsapi->getWritePtr(dst, plane);
@@ -157,13 +160,16 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
                     uint8_t *rwptrs[d->alignment] = { dstp + d->frame_strides[plane][0] * y };
                     for (int i = 0; i < numInputs; i++) {
-                        rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + d->frame_strides[plane][i + 1] * y);
+                        if constexpr (unsafe)
+                            rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + d->frame_strides[plane][i + 1] * VSMIN(y, d->vis[i]->height - 1));
+                        else
+                            rwptrs[i + 1] = const_cast<uint8_t *>(srcp[i] + d->frame_strides[plane][i + 1] * y);
                     }
 
                     proc(rwptrs, d->ptroffsets[plane], &frame_consts[0]);
                 }
             } else {
-                ExprInterpreter interpreter(d->bytecode[plane].data(), d->bytecode[plane].size(), d->vis.data());
+                ExprInterpreter interpreter(d->bytecode[plane].data(), d->bytecode[plane].size(), d->vis.data(), unsafe);
 
                 for (int y = 0; y < h; y++) {
                     frame_consts[MemoryVar::VAR_Y] = y;
@@ -172,7 +178,13 @@ static const VSFrame *VS_CC exprGetFrame(int n, int activationReason, void *inst
 
                     dstp += d->frame_strides[plane][0];
                     for (int i = 0; i < numInputs; i++) {
-                        srcp[i] += d->frame_strides[plane][i + 1];
+                        if constexpr (unsafe) {
+                            if (y < d->vis[i]->height - 1) {
+                                srcp[i] += d->frame_strides[plane][i + 1];
+                            }
+                        } else {
+                            srcp[i] += d->frame_strides[plane][i + 1];
+                        }
                     }
                 }
             }
@@ -201,6 +213,9 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     int cpulevel;
 
     FConstUse fconsts_use = FConstUse::none;
+    bool safe = (bool)userData;
+
+    std::string func_name(safe ? "Expr" : "UnsafeExpr");
 
     try {
         d->numInputs = vsapi->mapNumElements(in, "clips");
@@ -227,13 +242,13 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
             )
                 throw std::runtime_error("Input clips must be 8-32 bit integer or 16/32 bit float format");
 
-            if (
+            if (safe && (
                 d->vis[0]->format.numPlanes != d->vis[i]->format.numPlanes
                 || d->vis[0]->format.subSamplingW != d->vis[i]->format.subSamplingW
                 || d->vis[0]->format.subSamplingH != d->vis[i]->format.subSamplingH
                 || d->vis[0]->width != d->vis[i]->width
                 || d->vis[0]->height != d->vis[i]->height
-            )
+            ))
                 throw std::runtime_error("All inputs must have the same number of planes and the same dimensions, subsampling included");
         }
 
@@ -242,13 +257,20 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
         if (!err) {
             VSVideoFormat f;
             if (vsapi->getVideoFormatByID(&f, format, core) && f.colorFamily != cfUndefined) {
-                if (d->vi.format.numPlanes != f.numPlanes)
-                    throw std::runtime_error("The number of planes in the inputs and output must match");
+                if (safe) {
+                    if (d->vi.format.numPlanes != f.numPlanes)
+                        throw std::runtime_error("The number of planes in the inputs and output must match");
 
-                if (d->vi.format.subSamplingW != f.subSamplingW || d->vi.format.subSamplingH != f.subSamplingH)
-                    throw std::runtime_error("The subsampling in the inputs and output must match");
+                    if (d->vi.format.subSamplingW != f.subSamplingW || d->vi.format.subSamplingH != f.subSamplingH)
+                        throw std::runtime_error("The subsampling in the inputs and output must match");
+                }
 
-                vsapi->queryVideoFormat(&d->vi.format, d->vi.format.colorFamily, f.sampleType, f.bitsPerSample, d->vi.format.subSamplingW, d->vi.format.subSamplingH, core);
+                int success = vsapi->queryVideoFormat(&d->vi.format, d->vi.format.colorFamily, f.sampleType, f.bitsPerSample, d->vi.format.subSamplingW, d->vi.format.subSamplingH, core);
+
+                if (!safe && success) {
+                    d->vi.format.colorFamily = f.colorFamily;
+                    d->vi.format.numPlanes = f.numPlanes;
+                }
             }
         }
 
@@ -277,7 +299,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
             d->ptroffsets[i] = new intptr_t[d->alignment];
 
             if (expr[i].empty()) {
-                if (canCopyPlane(&d->vi, d->vis[0])) {
+                if (canCopyPlane(&d->vi, d->vis[0]) && (safe || d->vi.format.numPlanes == d->vis[0]->format.numPlanes)) {
                     d->plane[i] = { PlaneOp::copy, 0 };
                 } else {
                     d->plane[i] = { PlaneOp::undefined };
@@ -317,7 +339,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
                 d->niterations[i][j + 1] = ((d->vis[j]->width >> (i == 0 ? 0 : d->vis[j]->format.subSamplingW)) + 7) / 8;
             }
 
-            std::tie(d->proc[i], d->procSize[i]) = expr::compile_jit(d->bytecode[i].data(), d->bytecode[i].size(), d->numInputs, cpulevel, d->niterations[i]);
+            std::tie(d->proc[i], d->procSize[i]) = expr::compile_jit(d->bytecode[i].data(), d->bytecode[i].size(), d->numInputs, cpulevel, d->niterations[i], !safe);
         }
 #ifdef VS_TARGET_OS_WINDOWS
         FlushInstructionCache(GetCurrentProcess(), nullptr, 0);
@@ -326,7 +348,7 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
         for (int i = 0; i < d->numInputs; i++) {
             vsapi->freeNode(d->node[i]);
         }
-        vsapi->mapSetError(out, (std::string{ "Expr: " } + e.what()).c_str());
+        vsapi->mapSetError(out, (func_name + ": " + e.what()).c_str());
         return;
     }
 
@@ -347,12 +369,19 @@ void VS_CC exprCreate(const VSMap *in, VSMap *out, void *userData, VSCore *core,
     VSFilterGetFrame getFrame;
 
     if (cpulevel > VS_CPU_LEVEL_NONE)
-        getFrame = fconsts_use == FConstUse::base ? exprGetFrame<true, FConstUse::base> : exprGetFrame<true, FConstUse::none>;
+        getFrame = safe ? (
+            fconsts_use == FConstUse::base ? exprGetFrame<true, false, FConstUse::base> : exprGetFrame<true, false, FConstUse::none>
+        ) : (
+            fconsts_use == FConstUse::base ? exprGetFrame<true, true, FConstUse::base> : exprGetFrame<true, true, FConstUse::none>
+        );
     else
-        getFrame = fconsts_use == FConstUse::base ? exprGetFrame<false, FConstUse::base> : exprGetFrame<false, FConstUse::none>;
-    
+        getFrame = safe ? (
+            fconsts_use == FConstUse::base ? exprGetFrame<false, false, FConstUse::base> : exprGetFrame<false, false, FConstUse::none>
+        ) : (
+            fconsts_use == FConstUse::base ? exprGetFrame<false, true, FConstUse::base> : exprGetFrame<false, true, FConstUse::none>
+        );
 
-    vsapi->createVideoFilter(out, "Expr", &d->vi, getFrame, exprFree, fmParallel, deps.data(), d->numInputs, d.get(), core);
+    vsapi->createVideoFilter(out, func_name.c_str(), &d->vi, getFrame, exprFree, fmParallel, deps.data(), d->numInputs, d.get(), core);
 
     d.release();
 }

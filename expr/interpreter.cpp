@@ -9,7 +9,7 @@
 #include <vector>
 #include "interpreter.h"
 
-ExprInterpreter::ExprInterpreter(const ExprInstruction *bytecode, size_t numInsns, const VSVideoInfo **srcFormats) : bytecode(bytecode), numInsns(numInsns), srcFormats(srcFormats)
+ExprInterpreter::ExprInterpreter(const ExprInstruction *bytecode, size_t numInsns, const VSVideoInfo **srcFormats, bool unsafe) : bytecode(bytecode), numInsns(numInsns), srcFormats(srcFormats), unsafe(unsafe)
 {
     int maxreg = 0;
     for (size_t i = 0; i < numInsns; ++i) {
@@ -27,12 +27,13 @@ void ExprInterpreter::eval(const uint8_t * const *srcp, uint8_t *dstp, const flo
 #define SRC2 registers[insn.src2]
 #define SRC3 registers[insn.src3]
 #define DST registers[insn.dst]
+#define LIM_X unsafe ? VSMIN(x, srcFormats[insn.op.imm.i]->width - 1) : x
         switch (insn.op.type) {
-        case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.i])[x]; break;
-        case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.i])[x]; break;
-        case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.i])[x]; break;
-        case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.i])[x]; break;
-        case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.i])[x]; break;
+        case ExprOpType::MEM_LOAD_U8: DST = reinterpret_cast<const uint8_t *>(srcp[insn.op.imm.i])[LIM_X]; break;
+        case ExprOpType::MEM_LOAD_U16: DST = reinterpret_cast<const uint16_t *>(srcp[insn.op.imm.i])[LIM_X]; break;
+        case ExprOpType::MEM_LOAD_U32: DST = reinterpret_cast<const uint32_t *>(srcp[insn.op.imm.i])[LIM_X]; break;
+        case ExprOpType::MEM_LOAD_F16: DST = reinterpret_cast<const float16 *>(srcp[insn.op.imm.i])[LIM_X]; break;
+        case ExprOpType::MEM_LOAD_F32: DST = reinterpret_cast<const float *>(srcp[insn.op.imm.i])[LIM_X]; break;
         case ExprOpType::MEM_LOAD_VAR:
             switch (static_cast<MemoryVar>(insn.op.imm.u)) {
             case MemoryVar::VAR_X: DST = x; break;
