@@ -85,7 +85,7 @@ void VS_CC exprDebugCreate(const VSMap *in, VSMap *out, void *userData, VSCore *
 
         int format = vsapi->mapGetIntSaturated(in, "format", 0, &err);
         if (err) {
-            format = VSPresetFormat::pfGray8;
+            format = VSPresetVideoFormat::pfGray8;
         }
 
         VSVideoFormat f;
